@@ -257,3 +257,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page);
   .trait { font-size: 10px; padding: 3px 8px; } .traits { margin-top: 56px; }
 }
 @media (prefers-reduced-motion: reduce) { .ripples i, .sun, .ml, .flakes, .tap { animation: none !important; } }
+
+#c-mic.listening { background: rgba(0, 180, 255, 0.25); border-color: var(--ion-cyan); animation: micpulse 1.4s ease-in-out infinite; }
+@keyframes micpulse { 50% { box-shadow: 0 0 0 6px rgba(0, 180, 255, 0.28); } }
+.heard { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); z-index: 31; pointer-events: none; padding: 6px 14px; border-radius: 999px; font: 600 13px var(--font-mono); background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); animation: toast 2.4s var(--ease) forwards; }
+@media (prefers-reduced-motion: reduce) { #c-mic.listening { animation: none; } }

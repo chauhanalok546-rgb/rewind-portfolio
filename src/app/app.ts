@@ -3,6 +3,9 @@ import { film } from '../film/film'
 import { $, decay, hide, log, reduced, setStatus, show, wait, whiteFlash } from './hud'
 import { sfx } from '../audio/sfx'
 import { mountStickers, toast } from '../ui/stickers'
+import { startPresence, type Presence } from '../sense/presence'
+import { Recognizer, voiceSupported } from '../voice/recognizer'
+import { parseCommand } from '../voice/parse'
 
 /** The experience as an explicit state machine:  BOOT → ENTER → LOBBY → PRESENCE → GREETING → ASK → TRANSITION → ARRIVED
  *  (the film itself arrives in the next phase).  Any state can be jumped to with a URL hash, e.g. #ask or #lobby. */
@@ -50,6 +53,7 @@ async function boot() {
   enter()
 }
 
+let cameraReady: Promise<Presence> | null = null
 let skipEnter = false          // development jumps (#lobby, #ask, #transition, #film-sceneN) skip the Enter card
 function enter() {
   if (skipEnter) return
@@ -57,7 +61,9 @@ function enter() {
   show('enter')
   const btn = $('enter-btn'); btn.focus()
   btn.addEventListener('click', () => {
-    sfx.unlock()                                   // the click unlocks sound
+    sfx.unlock()                                   // the click unlocks sound ...
+    cameraReady = startPresence()                  // ... and asks for the camera (only to notice that someone is here)
+    void cameraReady.then(() => startVoice())      // then voice commands, so the two permission prompts do not collide
     hide('enter'); lobby()
   }, { once: true })
 }
@@ -68,15 +74,31 @@ async function lobby() {
   setStatus('Standby')
   log('Audio channel open ✓')
   await wait(2400)                                 // the avatar idles and glances around first
-  presence()
+  void presence()
 }
 
+/** PRESENCE: wait (up to 10 s) until a face is held steady for about a second; no camera means we greet right away. */
 async function presence() {
   setState('PRESENCE')
-  log('Visitor connected ✓')
+  let cam: Presence | null = null
+  if (cameraReady) {
+    const pending = cameraReady
+    cam = await Promise.race([pending, wait(15000).then(() => null)])      // never wait forever on a permission prompt
+    if (!cam) void pending.then((late) => late.stop())
+  }
+  if (cam && cam.result === 'watching') {
+    log('Camera ready ✓')
+    const seen = await cam.waitForFace(1000, 10000, (x, y) => avatar.lookAtVisitor((0.5 - x) * 0.7, (0.5 - y) * 0.4, 9000))
+    log(seen ? 'Face detected ✓' : 'No face seen, starting anyway')
+    cam.stop(); log('Camera off ✓')                 // the camera is turned off once the greeting starts
+    if (seen) { avatar.lookAtVisitor(0, 0.05, 9000); await wait(600) }
+  } else {
+    log(cam && cam.result === 'denied' ? 'Camera declined, skipping detection' : 'No camera, skipping detection')
+    log('Visitor connected ✓')
+  }
   avatar.setExpression('happy')
-  await wait(900)
-  greeting()
+  await wait(500)
+  void greeting()
 }
 
 async function greeting() {
@@ -84,6 +106,45 @@ async function greeting() {
   await narrator.playSequence(['greet_1', 'greet_2'])   // namaste + two greeting lines
   avatar.setExpression('neutral')
   ask()
+}
+
+/* ---------- voice commands ---------- */
+const recognizer = new Recognizer()
+function heard(text: string) {
+  const el = document.createElement('div'); el.className = 'heard'; el.textContent = `“${text.trim()}”`
+  document.getElementById('app')!.appendChild(el); setTimeout(() => el.remove(), 2500)
+}
+function handleSpeech(text: string) {
+  const cmd = parseCommand(text, { asking: state === 'ASK', inFilm: state === 'FILM' || state === 'END' })
+  if (!cmd) return
+  heard(text); log(`Voice: ${cmd.type}${cmd.type === 'year' ? ' ' + cmd.year : ''}`)
+  switch (cmd.type) {
+    case 'yes': void sayYes(); break
+    case 'no': sayNo(); break
+    case 'pause': film.pause(); break
+    case 'play': film.resume(); break
+    case 'next': film.next(); break
+    case 'prev': film.prev(); break
+    case 'replay': film.replay(); break
+    case 'contact': film.contact(); break
+    case 'showme': document.dispatchEvent(new CustomEvent('film:decode')); break
+    case 'year': film.jump(cmd.scene); break
+  }
+}
+function startVoice() {
+  if (!voiceSupported) return
+  const mic = $('c-mic') as HTMLButtonElement
+  mic.disabled = false; mic.title = 'Voice commands: say pause, skip, back, replay, contact or a year (M)'
+  recognizer.onFinal = handleSpeech
+  recognizer.onState = (st) => {
+    const on = st === 'listening'
+    mic.classList.toggle('listening', on); mic.setAttribute('aria-pressed', String(on))
+    document.documentElement.dataset.voice = on ? 'on' : 'off'
+    if (on && !mic.dataset.logged) { mic.dataset.logged = '1'; log('Microphone listening ✓') }
+    if (st === 'blocked') { mic.disabled = true; mic.title = 'Microphone blocked: buttons do everything'; log('Microphone declined') }
+  }
+  recognizer.start()
+  mic.addEventListener('click', () => recognizer.toggle())
 }
 
 /* ---------- the Yes / No popup ---------- */
@@ -157,6 +218,7 @@ function wireControls() {
     if (e.key === 'Escape' && state === 'ASK') sayNo()
     if ((e.key === 'c' || e.key === 'C') && !e.metaKey && !e.ctrlKey) $('c-cc').click()
     if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey) $('c-snd').click()
+    if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !($('c-mic') as HTMLButtonElement).disabled) $('c-mic').click()
   })
   // chips: one per scene, locked until the film exists
   const chips = $('chips')

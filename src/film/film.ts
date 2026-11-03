@@ -164,6 +164,11 @@ export const film = {
   next() { film.jump(Math.min(SCENES.length - 1, current + 1)) },
   prev() { film.jump(Math.max(0, current - 1)) },
   toggle() { setPaused(!paused) },
+  pause() { setPaused(true) },
+  resume() { setPaused(false) },
+  get paused() { return paused },
+  /** jump to the end card right away: scene 6, fast-forwarded to where the contact cards are visible */
+  contact() { film.jump(6); setTimeout(() => { live?.tl.time(lineOffset(SCENES[6], 2) + 2, false) }, 150) },
   replay() { traits.length = 0; $('traits').replaceChildren(); setYearInstant(2026); ended = false; film.jump(0) },
   /** leaves the film and gives the lobby back */
   stop() { master?.kill(); master = null; disposeScene(); narrator.stop(); tunnel.stop(200); document.documentElement.classList.remove('film'); current = -1 },

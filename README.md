@@ -29,10 +29,16 @@ Developer shortcuts (URL hash): `#dev` (expressions, gestures, camera), `#lobby`
 
 The whole film runs without any API calls: narration is static audio, lip-sync is driven by the audio itself.
 
-## Keyboard
+## Keyboard and voice
 
-Space play/pause, Left/Right previous/next scene, R replay, C captions, S sound, Esc closes the popup.
+Space play/pause, Left/Right previous/next scene, R replay, C captions, S sound, M microphone, Esc closes the popup.
+
+Voice (Chrome and Edge; needs the microphone): say "yes" or "no" at the popup, then "pause", "play", "skip" or "next", "back" or "previous", "replay", "contact", "show me" (scene 5), or a year such as "2015" or "twenty twenty six". Only short, whole phrases count, so the avatar's own sentences can never trigger a command. The parser is tested: `node --test tests/parse.test.ts`.
+
+## Camera
+
+If you allow it, the camera is used only to notice that a face is present (MediaPipe runs on your device, nothing is stored or sent) and is switched off as soon as the greeting starts. Decline it and the avatar greets you right away.
 
 ## Privacy
 
-No camera or microphone is used yet. Nothing is recorded or uploaded.
+Camera: only to notice a face, on-device, off after the greeting. Microphone: only to hear short commands, while the mic icon is lit; the browser's speech service handles recognition. Nothing is recorded or uploaded by this site.

@@ -103,6 +103,10 @@ export class Avatar {
 
   cues: VisemeCue[] = []
   audio?: HTMLAudioElement
+  /** spring-damped hair: six hair bones lag behind head turns and settle with a little overshoot (off on weak devices) */
+  hairPhysics = true
+  private hair: Array<{ bone: THREE.Bone; angle: number; d: THREE.Vector3; v: THREE.Vector3 }> = []
+  private prevHead = { yaw: 0, pitch: 0, roll: 0, init: false }
   private ctx?: AudioContext
   private analyser?: AnalyserNode
   private td = new Float32Array(1024)
@@ -134,6 +138,10 @@ export class Avatar {
     })
     for (const [n, b] of this.bones) this.rest.set(n, b.quaternion.clone())
     for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftEye', 'RightEye', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm']) this.bn[n] = this.bones.get(n)
+    for (const [n, b] of this.bones) {
+      const m = /^Hair(Front|BackL|BackR|Back|L|R)$/.exec(n)
+      if (m) this.hair.push({ bone: b, angle: { Front: 0, R: 90, BackR: 135, Back: 180, BackL: -135, L: -90 }[m[1] as 'Front'] * Math.PI / 180, d: new THREE.Vector3(), v: new THREE.Vector3() })
+    }
     this.relaxArms()
     // morph lookup tables
     for (const m of this.morphMeshes) for (const name of Object.keys(m.morphTargetDictionary!)) {
@@ -169,7 +177,10 @@ export class Avatar {
     this.exprTarget.fill(0)
     for (const n in EXPRESSIONS[e]) { const i = this.morphIndex.get(n); if (i !== undefined) this.exprTarget[i] = EXPRESSIONS[e][n] }
   }
-  setLookTarget(x: number, y: number) { this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
+  private lockUntil = 0
+  /** Eyes and head turn to the visitor (the camera) and ignore the mouse pointer for a while. */
+  lookAtVisitor(x: number, y: number, ms = 6000) { this.lockUntil = performance.now() + ms; this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
+  setLookTarget(x: number, y: number) { if (performance.now() < this.lockUntil) return; this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
   blinkNow(duration = 0.16) { if (this.blinkT < 0) { this.blinkT = 0; this.blinkDur = duration } }
 
   isSpeaking() { return !!(this.audio && !this.audio.paused && !this.audio.ended && (this.analyserMode || this.cues.length)) }
@@ -266,6 +277,7 @@ export class Avatar {
     const eyeYaw = (ex - hx * 0.6 + this.saccX) * MAX_YAW * 0.55
     const eyePitch = -(ey - hy * 0.6 + this.saccY) * MAX_PITCH * 0.8
     this.look('LeftEye', eyeYaw, eyePitch, 0); this.look('RightEye', eyeYaw, eyePitch, 0)
+    this.updateHair(dt, yaw * 0.65 + yaw * 0.35, pitch * 0.65 + pitch * 0.35 + nod, tilt)
 
     // ---- blinking: 120-180 ms, every 2-6 s, occasional double blink
     if (this.blinkT < 0) {
@@ -332,6 +344,38 @@ export class Avatar {
       const v = damp(this.values[i], this.wanted[i], rate, dt)
       this.values[i] = v
       for (const [m, idx] of this.morphSlots[i]) m.morphTargetInfluences![idx] = v
+    }
+  }
+
+  /** Hair bones: each swings opposite to the head's angular motion (tangential lag), driven through a damped spring. */
+  private updateHair(dt: number, yaw: number, pitch: number, roll: number) {
+    const ph = this.prevHead
+    if (!ph.init) { ph.yaw = yaw; ph.pitch = pitch; ph.roll = roll; ph.init = true }
+    const wy = (yaw - ph.yaw) / dt, wx = (pitch - ph.pitch) / dt, wz = (roll - ph.roll) / dt
+    ph.yaw = yaw; ph.pitch = pitch; ph.roll = roll
+    if (!this.hairPhysics || !this.hair.length) return
+    const head = this.bn['Head']; if (!head) return
+    head.getWorldQuaternion(this._pw)
+    for (const h of this.hair) {
+      const rx = Math.sin(h.angle) * 0.075, rz = -Math.cos(h.angle) * 0.075              // where this bone's tail sits around the head
+      // tangential velocity of that point for the head's angular velocity w = (wx, wy, wz):  w x r
+      const tx = wy * rz - wz * 0, ty = wz * rx - wx * rz, tz = wx * 0 - wy * rx
+      this._v1.set(-tx, -ty * 0.5, -tz).multiplyScalar(0.12)                             // hair lags behind the motion
+      this._v1.y += Math.sin(this.clock * 1.3 + h.angle) * 0.0015                        // a hint of idle sway
+      // spring toward that target: semi-implicit Euler, slightly under-damped so it overshoots a little and settles
+      h.v.addScaledVector(this._v2.copy(this._v1).sub(h.d), 90 * dt).addScaledVector(h.v, -9 * dt)
+      h.d.addScaledVector(h.v, dt)
+      const len = h.d.length(); if (len > 0.05) h.d.multiplyScalar(0.05 / len)
+      // displacement of a hanging tip -> rotation about (down x d), converted into the bone's local space
+      const rest = this.rest.get(h.bone.name)!
+      this._v3.set(0, -1, 0).cross(h.d)
+      const ang = h.d.length() / 0.08
+      if (ang < 1e-5 || !isFinite(ang)) { h.bone.quaternion.copy(rest); continue }
+      this._q.setFromAxisAngle(this._v3.normalize(), ang)
+      // local offset = (pw * rest)^-1 * qWorld * (pw * rest)
+      this._bw.copy(this._pw).multiply(rest)
+      this._delta.copy(this._bw).invert().multiply(this._q).multiply(this._bw)
+      h.bone.quaternion.copy(rest).multiply(this._delta)
     }
   }
 

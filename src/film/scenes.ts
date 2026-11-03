@@ -43,7 +43,7 @@ const scene0: SceneDef = {
     c.type(pre, 'booting alok.os v18\ncalibrating robotic arm ✓\n', 0.8, 2.2)
     const sig = c.add<HTMLElement>(`<div class="prop term-signal right mono">incoming signal · origin: 2030 · integrity 12%</div>`)
     c.tl.fromTo(sig, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15, repeat: 5, yoyo: true }, 3.2).to(sig, { autoAlpha: 1, duration: 0.1 })
-    const hint = c.add('<div class="prop hint">Tap a year below to jump, or just watch.</div>')
+    const hint = c.add(`<div class="prop hint">${document.documentElement.dataset.voice === 'on' ? 'Say a year to jump, or just watch.' : 'Tap a year below to jump, or just watch.'}</div>`)
     c.tl.fromTo(hint, { autoAlpha: 0 }, { autoAlpha: 0.9, duration: 1 }, c.at(2, 0.5))
   },
 }
@@ -266,6 +266,7 @@ const scene5: SceneDef = {
       const o = { v: 12 }; gsap.to(o, { v: 100, duration: 2, ease: 'power2.inOut', onUpdate: () => { meter.style.width = o.v + '%'; pct.textContent = `integrity ${Math.round(o.v)}%`; setSignal(Math.round(o.v) + '%') }, onComplete: () => c.word('ambitious') })
     }
     sig.querySelector('button')!.addEventListener('click', decode)
+    document.addEventListener('film:decode', decode, { once: true })       // "Show me" by voice
     pop(c, sig, c.at(2, 5.5), undefined)
     c.tl.call(decode, [], c.at(2, 8.8))
   },
@@ -287,7 +288,7 @@ const scene6: SceneDef = {
       c.tl.call(() => { built.textContent += (i ? ' ' : '') + words[i] }, [], c.at(1, 3.6 + i * 1.8))
     })
     // contact cards
-    const contact = c.add<HTMLElement>(`<div class="prop contact right"><a class="glass cc" href="https://github.com/chauhanalok546-rgb" target="_blank" rel="noopener"><b>GitHub</b><span class="mono">chauhanalok546-rgb</span></a><a class="glass cc" href="https://linkedin.com/in/alok-chauhan-72a9603a1" target="_blank" rel="noopener"><b>LinkedIn</b><span class="mono">alok-chauhan-72a9603a1</span></a><button class="btn primary" id="replay">↺ Replay the story</button><p class="mono hint2">Press R to replay, or ask me anything soon.</p></div>`)
+    const contact = c.add<HTMLElement>(`<div class="prop contact right"><a class="glass cc" href="https://github.com/chauhanalok546-rgb" target="_blank" rel="noopener"><b>GitHub</b><span class="mono">chauhanalok546-rgb</span></a><a class="glass cc" href="https://linkedin.com/in/alok-chauhan-72a9603a1" target="_blank" rel="noopener"><b>LinkedIn</b><span class="mono">alok-chauhan-72a9603a1</span></a><button class="btn primary" id="replay">↺ Replay the story</button><p class="mono hint2">${document.documentElement.dataset.voice === 'on' ? 'Say "replay" or "contact", or press R.' : 'Press R to replay.'}</p></div>`)
     c.tl.fromTo(contact.children, { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, stagger: 0.18, duration: 0.7, ease: 'back.out(1.4)' }, c.at(2, 0.4))
     contact.querySelector('#replay')!.addEventListener('click', () => document.dispatchEvent(new CustomEvent('film:replay')))
   },

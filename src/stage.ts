@@ -82,6 +82,7 @@ const motes = new THREE.Points(moteGeo, moteMat); motes.frustumCulled = false; s
 
 const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 60)
 const avatar = new Avatar()
+avatar.hairPhysics = !lowEnd
 scene.add(avatar.root)
 const narrator = new Narrator(avatar)
 
