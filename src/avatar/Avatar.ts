@@ -62,7 +62,6 @@ class Smooth {
   }
 }
 
-const speakingNow = (a: { audio?: HTMLAudioElement; cues: VisemeCue[] }) => !!(a.audio && !a.audio.paused && a.cues.length)
 const FINGERS = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']
 const CURL_SEG = [0.95, 1.2, 0.8]
 
@@ -102,6 +101,13 @@ export class Avatar {
 
   cues: VisemeCue[] = []
   audio?: HTMLAudioElement
+  private ctx?: AudioContext
+  private analyser?: AnalyserNode
+  private td = new Float32Array(1024)
+  private fd = new Uint8Array(512)
+  private analyserMode = false
+  private level = 0
+  private dip = 0
   /** Fired at key moments of a gesture (e.g. 'snap' when the fingers slip, for the sound and the white flash). */
   onEvent?: (name: 'snap') => void
 
@@ -163,6 +169,34 @@ export class Avatar {
   setLookTarget(x: number, y: number) { this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
   blinkNow() { if (this.blinkT < 0) this.blinkT = 0 }
 
+  isSpeaking() { return !!(this.audio && !this.audio.paused && !this.audio.ended && (this.analyserMode || this.cues.length)) }
+
+  stop() { this.audio?.pause(); this.cues = []; this.analyserMode = false }
+
+  /** Plays any audio and lip-syncs it from the sound itself (loudness drives the jaw, brightness picks the mouth shape). */
+  speakAudio(audioUrl: string): Promise<void> {
+    return new Promise<void>((resolve) => {
+      this.audio?.pause()
+      this.cues = []
+      const el = new Audio(audioUrl)
+      el.crossOrigin = 'anonymous'
+      this.audio = el
+      this.analyserMode = true
+      this.ensureAudioGraph(el)
+      const done = () => { if (this.audio === el) this.analyserMode = false; resolve() }
+      el.onended = done; el.onerror = done
+      el.play().catch(done)
+    })
+  }
+
+  private ensureAudioGraph(el: HTMLAudioElement) {
+    this.ctx ??= new AudioContext()
+    if (this.ctx.state === 'suspended') void this.ctx.resume()
+    if (!this.analyser) { this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 1024; this.analyser.smoothingTimeConstant = 0.35 }
+    const src = this.ctx.createMediaElementSource(el)
+    src.connect(this.analyser); this.analyser.connect(this.ctx.destination)
+  }
+
   async speak(audioUrl: string, cuesUrl: string, onEnd?: () => void) {
     const data = await (await fetch(cuesUrl)).json()
     this.cues = data.cues; this.cueIdx = 0
@@ -182,7 +216,7 @@ export class Avatar {
     this.clock += dt
     const t = this.clock
     this.wanted.fill(0)
-    const speaking = speakingNow(this)
+    const speaking = this.isSpeaking()
     this.mouth = damp(this.mouth, speaking ? 1 : 0, 4, dt)
 
     // ---- body life: breathing drives chest, shoulders and a hint of head; weight shift on the hips
@@ -249,6 +283,27 @@ export class Avatar {
     this.want('browOuterUpRight', 0.12 + 0.05 * Math.sin(t * 0.7 + 0.6))
     const lookDown = hy + driftY
     if (lookDown < -0.2) { const k = Math.min(0.3, -lookDown * 0.35); this.want('eyeBlinkLeft', k); this.want('eyeBlinkRight', k) }
+
+    // ---- audio-driven lip-sync (works for any voice, including live answers later)
+    if (this.analyserMode && this.analyser && speaking) {
+      this.analyser.getFloatTimeDomainData(this.td)
+      let sum = 0
+      for (let i = 0; i < this.td.length; i++) sum += this.td[i] * this.td[i]
+      const rms = Math.sqrt(sum / this.td.length)
+      this.analyser.getByteFrequencyData(this.fd)
+      let num = 0, den = 0
+      for (let i = 2; i < this.fd.length; i++) { num += i * this.fd[i]; den += this.fd[i] }
+      const centroid = den > 0 ? (num / den) * (this.ctx!.sampleRate / this.analyser.fftSize) : 0
+      const open = Math.min(1, Math.max(0, (rms - 0.02) / 0.3)) ** 0.85
+      this.level = damp(this.level, open, open > this.level ? 28 : 14, dt)        // quick attack, softer release
+      const o = this.level
+      if (centroid < 1800) { this.want('viseme_O', o * 0.6); this.want('viseme_U', o * 0.22) }
+      else if (centroid < 3200) { this.want('viseme_aa', o * 0.65); this.want('viseme_E', o * 0.2) }
+      else { this.want('viseme_I', o * 0.35); this.want('viseme_SS', o * 0.3) }
+      // lips press together on sudden dips between words
+      this.dip = damp(this.dip, o < 0.06 ? 1 : 0, 10, dt)
+      this.want('viseme_PP', this.dip * 0.3 * (this.level > 0 ? 1 : 0))
+    } else this.level = damp(this.level, 0, 12, dt)
 
     // ---- lip-sync: the current cue is held (no per-cue pulsing), mouth closes in silences
     if (this.audio && this.cues.length) {

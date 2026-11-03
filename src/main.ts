@@ -2,6 +2,7 @@ import './style.css'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { Avatar, type Expression, type Gesture } from './avatar/Avatar'
+import { Narrator } from './voice/Narrator'
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement
 const statusEl = document.getElementById('status')!
@@ -168,7 +169,20 @@ function tick() {
   requestAnimationFrame(tick)
 }
 
-avatar.load('/avatar.glb').then(() => {
+const narrator = new Narrator(avatar)
+narrator.onCaption = (text, line) => {
+  if (!text) { sub.classList.remove('on'); return }
+  sub.textContent = line?.speaker === 'ARM-01' ? `ARM-01: ${text}` : text
+  sub.classList.add('on')
+}
+const greetingBtn = document.getElementById('greeting') as HTMLButtonElement
+const allBtn = document.getElementById('all') as HTMLButtonElement
+greetingBtn.onclick = () => { void narrator.playSequence(['greet_1', 'greet_2']) }
+allBtn.onclick = () => { void narrator.playSequence(narrator.lines.map((l) => l.id)) }
+document.getElementById('stop')!.addEventListener('click', () => narrator.stop())
+
+Promise.all([avatar.load('/avatar.glb'), narrator.load()]).then(() => {
+  greetingBtn.disabled = allBtn.disabled = false
   ready = true
   statusEl.textContent = `ready · ${avatar.morphCount} morph targets`
   speakBtn.disabled = frameBtn.disabled = blinkBtn.disabled = false
@@ -198,6 +212,7 @@ for (const g of ['wave', 'namaste', 'snap', 'thumbs_up', 'talk1', 'talk2', 'pres
 }
 // debug hooks for automated checks
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
+;(window as unknown as Record<string, unknown>).__narrator = narrator
 ;(window as unknown as Record<string, unknown>).__cam = { camPos, camLook }
 ;(window as unknown as Record<string, unknown>).__dbg = { scene, renderer, key, rimC, rimA, fill, hemi, motes, pool, halos, rings, platform }
 tick()
