@@ -45,7 +45,11 @@ export default async function handler(req: Req, res: Res) {
       text = data.content?.find((c) => c.type === 'text')?.text ?? ''
     } else {
       const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      // AI Studio keys (AIza...) use the Generative Language API; Vertex "express mode" keys (AQ....) use the Vertex endpoint
+      const url = (gem as string).startsWith('AQ.')
+        ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent`
+        : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+      const r = await fetch(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-goog-api-key': gem as string },
         body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: [{ role: 'user', parts: [{ text: q }] }], generationConfig: { maxOutputTokens: 300, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
