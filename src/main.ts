@@ -1,6 +1,7 @@
 import './style.css'
 import * as THREE from 'three'
-import { Avatar } from './avatar/Avatar'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { Avatar, type Expression } from './avatar/Avatar'
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement
 const statusEl = document.getElementById('status')!
@@ -17,7 +18,10 @@ renderer.shadowMap.enabled = true
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color('#f5f8fc')
-scene.add(new THREE.HemisphereLight('#ffffff', '#cfe3f5', 1.1))
+const pmrem = new THREE.PMREMGenerator(renderer)
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+scene.environmentIntensity = 0.55
+scene.add(new THREE.HemisphereLight('#ffffff', '#cfe3f5', 0.7))
 const key = new THREE.DirectionalLight('#ffffff', 2.2)
 key.position.set(2, 3, 3); key.castShadow = true; scene.add(key)
 const rim = new THREE.DirectionalLight('#00b4ff', 0.8)
@@ -101,6 +105,9 @@ speakBtn.onclick = async () => {
 }
 frameBtn.onclick = () => { closeUp = !closeUp; setFrame() }
 blinkBtn.onclick = () => avatar.blinkNow()
+for (const e of ['neutral', 'happy', 'serious', 'proud'] as Expression[]) {
+  document.getElementById('ex-' + e)!.addEventListener('click', () => avatar.setExpression(e))
+}
 
 // debug hooks for automated checks
 ;(window as unknown as Record<string, unknown>).__avatar = avatar

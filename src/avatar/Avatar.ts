@@ -1,6 +1,16 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
+export type Expression = 'neutral' | 'happy' | 'serious' | 'proud'
+
+/** morph weights for each mood (ARKit names) */
+const EXPRESSIONS: Record<Expression, Record<string, number>> = {
+  neutral: { mouthSmileLeft: 0.06, mouthSmileRight: 0.06 },
+  happy: { mouthSmileLeft: 0.7, mouthSmileRight: 0.7, cheekSquintLeft: 0.25, cheekSquintRight: 0.25, browInnerUp: 0.12, eyeSquintLeft: 0.12, eyeSquintRight: 0.12 },
+  serious: { browDownLeft: 0.3, browDownRight: 0.3, mouthFrownLeft: 0.12, mouthFrownRight: 0.12, mouthPressLeft: 0.1, mouthPressRight: 0.1 },
+  proud: { mouthSmileLeft: 0.22, mouthSmileRight: 0.22, browInnerUp: 0.05, browOuterUpLeft: 0.18, browOuterUpRight: 0.18 },
+}
+
 export interface VisemeCue { t: number; d: number; v: string }
 
 const MAX_YAW = THREE.MathUtils.degToRad(35)
@@ -23,6 +33,13 @@ export class Avatar {
   private clock = 0
   private cues: VisemeCue[] = []
   private audio?: HTMLAudioElement
+  private expr: Expression = 'neutral'
+  private exprMix = new Map<string, number>()
+  private saccade = new THREE.Vector2()
+  private saccadeT = 1
+  private weightShift = 0
+  private weightShiftTarget = 0
+  private weightT = 6
 
   async load(url: string) {
     const gltf = await new GLTFLoader().loadAsync(url)
@@ -71,6 +88,8 @@ export class Avatar {
     this.rest.set(bone.name, bone.quaternion.clone())
   }
 
+  setExpression(e: Expression) { this.expr = e }
+
   setLookTarget(x: number, y: number) { this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
 
   blinkNow() { if (this.blinkT < 0) this.blinkT = 0 }
@@ -97,14 +116,34 @@ export class Avatar {
     if (spine2) spine2.quaternion.copy(this.rest.get('Spine2')!).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(breath * 0.012, 0, Math.sin(this.clock * 0.5) * 0.006)))
     if (spine) spine.quaternion.copy(this.rest.get('Spine')!).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.sin(this.clock * 0.35) * 0.015, 0)))
 
-    // look-at: eyes lead, head follows (limited to ~35° yaw)
+    // saccades: small quick eye glances every 0.5-2 s (eyes lead, head barely follows)
+    this.saccadeT -= dt
+    if (this.saccadeT <= 0) {
+      this.saccadeT = 0.5 + Math.random() * 1.5
+      this.saccade.set((Math.random() - 0.5) * 0.18, (Math.random() - 0.5) * 0.12)
+    }
+    // slow head drift so the face is never frozen
+    const drift = new THREE.Vector2(Math.sin(this.clock * 0.41) * 0.035 + Math.sin(this.clock * 0.93) * 0.015, Math.sin(this.clock * 0.53 + 1) * 0.025)
+
+    // look-at: eyes lead, head follows (limited to ~35 deg yaw)
     this.look.x = damp(this.look.x, this.target.x, 5, dt)
     this.look.y = damp(this.look.y, this.target.y, 5, dt)
-    const yaw = this.look.x * MAX_YAW
-    const pitch = -this.look.y * MAX_PITCH
-    this.applyLook('Neck', yaw * 0.35, pitch * 0.35)
-    this.applyLook('Head', yaw * 0.65, pitch * 0.65)
-    for (const eye of ['LeftEye', 'RightEye']) this.applyLook(eye, yaw * 0.4, pitch * 0.4)
+    const yaw = (this.look.x + drift.x) * MAX_YAW
+    const pitch = -(this.look.y + drift.y) * MAX_PITCH
+    const speaking = !!(this.audio && !this.audio.paused && this.cues.length)
+    const nod = speaking ? Math.sin(this.clock * 2.4) * 0.02 + Math.sin(this.clock * 5.1) * 0.008 : 0
+    this.applyLook('Neck', yaw * 0.35, pitch * 0.35 + nod * 0.4)
+    this.applyLook('Head', yaw * 0.65, pitch * 0.65 + nod * 0.6)
+    const eyeYaw = yaw * 0.4 + this.saccade.x * MAX_YAW
+    const eyePitch = pitch * 0.4 - this.saccade.y * MAX_PITCH
+    for (const eye of ['LeftEye', 'RightEye']) this.applyLook(eye, eyeYaw, eyePitch)
+
+    // weight shift every 6-10 s
+    this.weightT -= dt
+    if (this.weightT <= 0) { this.weightT = 6 + Math.random() * 4; this.weightShiftTarget = (Math.random() < 0.5 ? -1 : 1) * 0.012 }
+    this.weightShift = damp(this.weightShift, this.weightShiftTarget, 1.2, dt)
+    const hips = this.bones.get('Hips')
+    if (hips) hips.quaternion.copy(this.rest.get('Hips')!).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, this.weightShift)))
 
     // blinking: 120–180 ms, every 2–6 s, occasional double blink
     if (this.blinkT < 0) {
@@ -122,6 +161,17 @@ export class Avatar {
         this.doubleBlink = false
       }
     }
+
+    // mood (blended) + tiny brow life
+    const mood = EXPRESSIONS[this.expr]
+    for (const n of new Set([...this.exprMix.keys(), ...Object.keys(mood)])) {
+      const v = damp(this.exprMix.get(n) ?? 0, mood[n] ?? 0, 3, dt)
+      this.exprMix.set(n, v)
+      if (v > 0.002) this.want(n, v * (speaking ? 0.7 : 1))
+    }
+    this.want('browInnerUp', 0.05 + 0.04 * Math.max(0, Math.sin(this.clock * 0.7)))
+    // look down a little -> lids follow
+    if (this.look.y + drift.y < -0.2) { const k = Math.min(0.35, -(this.look.y + drift.y) * 0.4); this.want('eyeBlinkLeft', k); this.want('eyeBlinkRight', k) }
 
     // lip-sync
     if (this.audio && this.cues.length) {

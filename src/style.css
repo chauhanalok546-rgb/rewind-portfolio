@@ -20,7 +20,7 @@ button {
   font: 600 13px system-ui, sans-serif; padding: 8px 12px; border-radius: 999px; cursor: pointer;
   border: 1px solid var(--graphite); background: transparent; color: var(--graphite);
 }
-button:first-child { background: var(--chrono-amber); border-color: var(--chrono-amber); }
+#speak { background: var(--chrono-amber); border-color: var(--chrono-amber); }
 button:disabled { opacity: 0.4; cursor: default; }
 button:focus-visible { outline: 3px solid var(--ion-cyan); outline-offset: 2px; }
 .sub {

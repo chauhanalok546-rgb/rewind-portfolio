@@ -14,7 +14,11 @@ im=node.image; W,H=im.size
 px=np.array(im.pixels[:],dtype=np.float32).reshape(H,W,4)
 random.seed(11)
 lock=[random.uniform(-0.0022,0.0022) for _ in range(40)]
-def cut_z(x): return 1.762+lock[int((x+0.09)/0.0045)%40]+0.005*(x/0.07)**2+0.02*max(0,abs(x)-0.058)**1*3
+def cut_z(x):
+    u=(x+0.09)/0.0070; i=int(u)%39; f=u-int(u)
+    base=lock[i]*(1-f)+lock[i+1]*f
+    fine=0.0007*math.sin(x*900)+0.0005*math.sin(x*1900+1)
+    return 1.762+base+fine+0.005*(x/0.07)**2+0.02*max(0,abs(x)-0.058)*3
 me=body.data; uvl=me.uv_layers.active.data
 rng=np.random.RandomState(3)
 for poly in me.polygons:
@@ -33,7 +37,7 @@ for poly in me.polygons:
         l3=1-l1-l2; m=(l1>=-0.001)&(l2>=-0.001)&(l3>=-0.001)
         wz=l1*P[0].z+l2*P[1].z+l3*P[2].z; wx=l1*P[0].x+l2*P[1].x+l3*P[2].x; wy=l1*P[0].y+l2*P[1].y+l3*P[2].y
         cz=np.vectorize(cut_z)(wx)
-        a=np.clip((wz-cz)/0.0012,0,1)*(wy<-0.02)*m              # 1 above the cut, soft 1 mm edge
+        a=np.clip((wz-cz)/0.0025,0,1)*(wy<-0.02)*m              # 1 above the cut, soft 1 mm edge
         streak=0.018+0.012*rng.rand(*a.shape)
         sub=px[y0:y1+1,x0:x1+1]
         for c,col in enumerate((0.020,0.020,0.026)): sub[...,c]=sub[...,c]*(1-a)+(col+streak*0.3)*a
@@ -43,6 +47,7 @@ tmp.filepath_raw=S+"face_fringe.png"; tmp.file_format='PNG'; tmp.save()
 ni=bpy.data.images.load(S+"face_fringe.png"); ni.colorspace_settings.name='sRGB'; ni.pack(); node.image=ni
 # ---------- 2. Chrono details ----------
 def mat(name,col,emit=0.0,metal=0.0,rough=0.5):
+    col=tuple(x**2.2 for x in col)
     m=bpy.data.materials.new(name); m.use_nodes=True; b=m.node_tree.nodes['Principled BSDF']
     b.inputs['Base Color'].default_value=(*col,1); b.inputs['Metallic'].default_value=metal; b.inputs['Roughness'].default_value=rough
     if emit:
@@ -51,6 +56,14 @@ def mat(name,col,emit=0.0,metal=0.0,rough=0.5):
 CYAN=mat('chrono_cyan',(0.0,0.706,1.0),emit=2.5); AMBER=mat('chrono_amber',(1.0,0.69,0.125),emit=1.2)
 CORD=mat('cord_black',(0.02,0.02,0.02),rough=0.8); SILVER=mat('ring_silver',(0.8,0.8,0.82),metal=1.0,rough=0.25)
 DARK=mat('chrono_graphite',(0.055,0.09,0.15),rough=0.4)
+def patch_mat():
+    m=bpy.data.materials.new('chrono_patch'); m.use_nodes=True; nt=m.node_tree; b=nt.nodes['Principled BSDF']
+    im=bpy.data.images.load(S+"patch_tex.png"); im.pack()
+    t=nt.nodes.new('ShaderNodeTexImage'); t.image=im
+    nt.links.new(t.outputs['Color'],b.inputs['Base Color']); nt.links.new(t.outputs['Color'],b.inputs['Emission Color'])
+    b.inputs['Emission Strength'].default_value=0.5; b.inputs['Roughness'].default_value=0.6
+    return m
+PATCH=patch_mat()
 def bone(n): b=arm.data.bones[n]; return b.head_local.copy(),b.tail_local.copy()
 def sleeve_radius(point,axis):
     ds=[]
@@ -86,7 +99,12 @@ for side,sgn in (('Left',-1),('Right',1)):
         cylinder('ChronoDisplay',pw+up*(rw*0.80+0.0132),up,0.0165,0.0012,CYAN,'LeftForeArm')
         # sleeve patch (amber) on the upper arm
         uh,ut=bone('LeftArm'); pp=uh+(ut-uh)*0.55; axu=(ut-uh).normalized(); ru=sleeve_radius(pp,axu)
-        cylinder('SleevePatch',pp+up*(ru+0.0015),up,0.02,0.003,AMBER,'LeftArm')
+        cpos=pp+up*(ru+0.0015); R=0.026
+        po=cylinder('SleevePatch',cpos,up,R,0.003,PATCH,'LeftArm')
+        uvl=po.data.uv_layers.active
+        for lp in po.data.loops:
+            co=po.data.vertices[lp.vertex_index].co
+            uvl.data[lp.index].uv=(0.5+(co.x-cpos.x)/(2*R),0.5+(co.y-cpos.y)/(2*R))
     else:
         # black knotted cord bracelet + thin silver ring on the index finger
         pb=fh+(ft-fh)*0.97+ax*0.012; rb=sleeve_radius(pb,ax)

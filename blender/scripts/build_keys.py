@@ -50,6 +50,7 @@ def d_brow(p,side,dz,inner=0,outer=0):
     v3,w3=blob(p,side*0.05,BROW_Z-0.002,0.016,0.012,0,0,outer)
     return v1+v2+v3
 def d_cheek(p,side,puff=0,squint=0):
+    squint*=1.6
     v,w=blob(p,side*0.058,1.668,0.022,0.022); return Vector((side*puff*w,-puff*0.6*w,squint*w))
 def d_nose(p,side,k):
     v,w=blob(p,side*0.02,1.677,0.011,0.009,0,0,k); return v
@@ -69,10 +70,10 @@ add('mouthPucker',lambda p:d_squeeze(p,0.55,-0.012))
 add('mouthLeft',lambda p:blob(p,0,MOUTH_Z,0.03,0.02,-0.008)[0])
 add('mouthRight',lambda p:blob(p,0,MOUTH_Z,0.03,0.02,0.008)[0])
 for s,n in ((L,'Left'),(R,'Right')):
-    add('mouthSmile'+n,lambda p,s=s:d_corner(p,s,0.007,0.0,0.007))
-    add('mouthFrown'+n,lambda p,s=s:d_corner(p,s,0.0,0.0,-0.006))
+    add('mouthSmile'+n,lambda p,s=s:d_corner(p,s,0.014,0.0,0.015)+blob(p,s*0.05,1.668,0.02,0.016,s*0.004,-0.003,0.006)[0])
+    add('mouthFrown'+n,lambda p,s=s:d_corner(p,s,0.0,0.0,-0.010))
     add('mouthDimple'+n,lambda p,s=s:d_corner(p,s,0.003,0.002,0.002))
-    add('mouthStretch'+n,lambda p,s=s:d_corner(p,s,0.008,0.0,-0.002))
+    add('mouthStretch'+n,lambda p,s=s:d_corner(p,s,0.011,0.0,-0.002))
     add('mouthPress'+n,lambda p,s=s:blob(p,s*0.015,MOUTH_Z,0.014,0.01,0,0,0.0)[0]+blob(p,s*0.015,LIP_LO_Z,0.014,0.006,0,0,0.003)[0])
     add('mouthUpperUp'+n,lambda p,s=s:blob(p,s*0.015,LIP_UP_Z,0.014,0.007,0,0,0.005)[0])
     add('mouthLowerDown'+n,lambda p,s=s:blob(p,s*0.015,LIP_LO_Z,0.014,0.007,0,0,-0.006)[0])
