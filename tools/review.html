@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rewind: listen and review</title>
+<style>
+ :root{--lab-white:#f5f8fc;--ion-cyan:#00b4ff;--chrono-amber:#ffb020;--graphite:#0e1726}
+ *{box-sizing:border-box} body{margin:0;background:var(--lab-white);color:var(--graphite);font-family:system-ui,sans-serif}
+ .wrap{max-width:860px;margin:0 auto;padding:18px 16px 100px;display:grid;gap:10px}
+ h1{font-size:22px;margin:0} p{margin:0;opacity:.8;line-height:1.45}
+ .bar{position:sticky;top:0;background:rgba(245,248,252,.92);backdrop-filter:blur(10px);padding:10px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid rgba(14,23,38,.1)}
+ button{font:600 14px system-ui;padding:9px 14px;border-radius:999px;border:1px solid var(--graphite);background:transparent;color:var(--graphite);cursor:pointer}
+ button.p{background:var(--chrono-amber);border-color:var(--chrono-amber)} button:focus-visible{outline:3px solid var(--ion-cyan);outline-offset:2px}
+ .l{background:rgba(255,255,255,.75);border:1px solid rgba(14,23,38,.12);border-radius:16px;padding:12px 14px;display:grid;gap:6px}
+ .l.flag{border-color:#d92d20;background:rgba(217,45,32,.06)} .l.now{box-shadow:0 0 0 3px rgba(0,180,255,.25)}
+ .m{font:12px ui-monospace,Menlo,monospace;opacity:.75;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+ .t{font-size:18px;line-height:1.4;font-weight:600} label{display:inline-flex;gap:6px;align-items:center;font-size:14px}
+ .warn{color:#b54708;font-weight:700} #out{font:13px ui-monospace,Menlo,monospace}
+</style></head><body><div class="wrap">
+<h1>Rewind: listen and review</h1>
+<p>Press Play on each line (or "Play all"). Tick <b>Redo</b> on any line that sounds rushed, flat, noisy or has a slip. Then press <b>Copy redo list</b> and paste it to Claude. Lines marked <span class="warn">fast</span> were spoken above about 215 words per minute.</p>
+<div class="bar"><button class="p" id="all">▶ Play all</button><button id="stop">■ Stop</button><button id="copy">Copy redo list</button><span id="out"></span></div>
+<div id="list"></div></div>
+<script>
+let lines=[],cur=null,audio=null,playingAll=false
+const $=id=>document.getElementById(id)
+async function init(){
+  lines=(await (await fetch('/audio/narration/script.json?'+Date.now())).json()).lines
+  lines.forEach((l,i)=>{ const words=(l.text.match(/[A-Za-z0-9'%-]+/g)||[]).length, wpm=Math.round(words/l.duration*60)
+    const d=document.createElement('div'); d.className='l'; d.id='l'+i
+    d.innerHTML=`<div class="m"><span>${i+1}/${lines.length} · ${l.id} · ${l.speaker}</span><span>${l.duration.toFixed(1)} s</span><span class="${wpm>215&&l.speaker==='ALOK'?'warn':''}">${wpm} wpm${wpm>215&&l.speaker==='ALOK'?' · fast':''}</span><label><input type="checkbox" data-i="${i}"> Redo</label></div><div class="t"></div><div><button data-p="${i}">▶ Play</button></div>`
+    d.querySelector('.t').textContent=l.text; $('list').appendChild(d) })
+  $('list').addEventListener('click',e=>{const b=e.target.closest('button[data-p]'); if(b){playingAll=false; play(+b.dataset.p)}})
+  $('list').addEventListener('change',e=>{ if(e.target.dataset.i!==undefined) $('l'+e.target.dataset.i).classList.toggle('flag',e.target.checked) })
+}
+function play(i,next){ audio&&audio.pause(); document.querySelectorAll('.l').forEach((n,k)=>n.classList.toggle('now',k===i)); $('l'+i).scrollIntoView({block:'center',behavior:'smooth'})
+  audio=new Audio('/audio/narration/'+lines[i].id+'.mp3?'+Date.now()); audio.onended=()=>{ if(playingAll&&i+1<lines.length) setTimeout(()=>play(i+1),500) }; audio.play() }
+$('all').onclick=()=>{playingAll=true; play(0)}; $('stop').onclick=()=>{playingAll=false; audio&&audio.pause()}
+$('copy').onclick=async()=>{ const ids=[...document.querySelectorAll('input[data-i]:checked')].map(c=>lines[+c.dataset.i].id); const t=ids.length?'Redo: '+ids.join(', '):'No redo needed'; try{await navigator.clipboard.writeText(t)}catch{}; $('out').textContent=t }
+init()
+</script></body></html>
