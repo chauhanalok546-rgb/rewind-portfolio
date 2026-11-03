@@ -37,5 +37,6 @@ for v in vs:
     hg.add([v.index],1-f,'REPLACE'); count+=1
 print("hair verts weighted:",count,"of",len(vs))
 for o in bpy.data.objects: o.select_set(False)
+bpy.ops.wm.save_as_mainfile(filepath=S+"stage5.blend")
 bpy.ops.export_scene.gltf(filepath=S+"alok_avatar_v3.glb",export_format='GLB',export_image_format='WEBP',export_image_quality=82,export_morph=True,export_skins=True,export_yup=True,export_apply=False,use_selection=False)
 print("done")

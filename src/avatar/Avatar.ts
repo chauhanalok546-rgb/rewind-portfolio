@@ -166,6 +166,9 @@ export class Avatar {
         body = m
         mat.emissive = new THREE.Color('#ff7e5c'); mat.emissiveMap = mat.map; mat.emissiveIntensity = 0.12   // blood-warm undertone, so skin never goes grey in shadow
         mat.envMapIntensity = 1.15
+        // openings for the 3D eyes: a black-and-white mask (made in Blender with the same UVs) cuts the skin away over each eye
+        const mask = new THREE.TextureLoader().load('/textures/eye_mask.png'); mask.flipY = false
+        mat.alphaMap = mask; mat.alphaTest = 0.5; mat.needsUpdate = true
       }
       if (o.name === 'avaturn_hair_0') { mat.roughness = 0.5; mat.envMapIntensity = 1.4 }
     })
