@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import gsap from 'gsap'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { Avatar } from './avatar/Avatar'
 import { Narrator } from './voice/Narrator'
@@ -12,6 +13,7 @@ let dprCap = 1.5                       // lowered automatically when the frame r
 renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap))
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.shadowMap.enabled = true
+renderer.localClippingEnabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
 
 const scene = new THREE.Scene()
@@ -100,6 +102,70 @@ export function setTheme(t: Theme) {
 export const getTheme = () => theme
 setTheme('cinematic')
 
+// ---- lobby objects can be hidden while the film plays
+const lobbyObjects: THREE.Object3D[] = [platform, edge, pool, motes, ...rings]
+export function setLobbyVisible(v: boolean, ms = 0) {
+  const apply = (o: THREE.Object3D, on: boolean) => { o.visible = on }
+  if (ms <= 0) { lobbyObjects.forEach((o) => apply(o, v)); return }
+  if (v) lobbyObjects.forEach((o) => { o.visible = true; o.scale.setScalar(0.001); gsap.to(o.scale, { x: 1, y: 1, z: 1, duration: ms / 1000, ease: 'power3.out' }) })
+  else lobbyObjects.forEach((o) => { gsap.to(o.scale, { x: 0.001, y: 0.001, z: 0.001, duration: ms / 1000, ease: 'power3.in', onComplete: () => { o.visible = false; o.scale.setScalar(1) } }) })
+}
+export function setAvatarPose(x: number, yaw: number, ms: number) {
+  if (ms <= 0) { avatar.root.position.x = x; avatar.root.rotation.y = yaw; return }
+  gsap.to(avatar.root.position, { x, duration: ms / 1000, ease: 'power3.inOut' })
+  gsap.to(avatar.root.rotation, { y: yaw, duration: ms / 1000, ease: 'power3.inOut' })
+}
+
+// ---- teleport: dissolve into cyan and amber light (feet up), reassemble head down; a sweeping clip plane + a particle burst
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1)       // visible where y > c (constant = -c)
+const tp = { c: -1, active: false, side: 0 }
+const P = 520
+const pPos = new Float32Array(P * 3), pVel = new Float32Array(P * 3), pLife = new Float32Array(P), pCol = new Float32Array(P * 3)
+const pGeo = new THREE.BufferGeometry()
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3))
+const pPoints = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.035, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, sizeAttenuation: true }))
+pPoints.frustumCulled = false; scene.add(pPoints)
+let pCursor = 0
+function emitParticles(n: number) {
+  for (let k = 0; k < n; k++) {
+    const i = pCursor++ % P, amber = Math.random() < 0.35
+    pPos[i * 3] = avatar.root.position.x + (Math.random() - 0.5) * 0.7; pPos[i * 3 + 1] = tp.c + (Math.random() - 0.5) * 0.08; pPos[i * 3 + 2] = (Math.random() - 0.5) * 0.35
+    pVel[i * 3] = (Math.random() - 0.5) * 0.5; pVel[i * 3 + 1] = 0.25 + Math.random() * 0.9; pVel[i * 3 + 2] = (Math.random() - 0.5) * 0.5
+    pLife[i] = 0.7 + Math.random() * 0.7
+    const c = amber ? [1.0, 0.69, 0.13] : [0.0, 0.71, 1.0]; pCol[i * 3] = c[0] * 2; pCol[i * 3 + 1] = c[1] * 2; pCol[i * 3 + 2] = c[2] * 2
+  }
+}
+function stepParticles(dt: number) {
+  if (tp.active) emitParticles(Math.max(1, Math.round(dt * 900)))
+  for (let i = 0; i < P; i++) {
+    if (pLife[i] <= 0) { pPos[i * 3 + 1] = -50; continue }
+    pLife[i] -= dt
+    pPos[i * 3] += pVel[i * 3] * dt; pPos[i * 3 + 1] += pVel[i * 3 + 1] * dt; pPos[i * 3 + 2] += pVel[i * 3 + 2] * dt
+    const f = Math.max(0, pLife[i]); pCol[i * 3] *= 0.99 * f > 0.3 ? 1 : 0.9; pCol[i * 3 + 1] *= f > 0.3 ? 1 : 0.9; pCol[i * 3 + 2] *= f > 0.3 ? 1 : 0.9
+  }
+  pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true
+}
+for (let i = 0; i < P; i++) pPos[i * 3 + 1] = -50
+let clipApplied = false
+function applyClip() {
+  if (clipApplied) return; clipApplied = true
+  avatar.root.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined; if (!m) return; for (const x of ([] as THREE.Material[]).concat(m)) { x.clippingPlanes = [clipPlane]; x.clipShadows = true } })
+}
+/** 'out': dissolve from the feet up (then hidden). 'in': reassemble from the head down. */
+export function teleport(dir: 'out' | 'in', ms = 1200): Promise<void> {
+  applyClip(); avatar.root.visible = true
+  const from = dir === 'out' ? -0.05 : 2.0, to = dir === 'out' ? 2.0 : -0.1
+  tp.c = from; clipPlane.constant = -tp.c; tp.active = true
+  return new Promise((resolve) => {
+    gsap.to(tp, { c: to, duration: ms / 1000, ease: dir === 'out' ? 'power2.in' : 'power2.out', onUpdate: () => { clipPlane.constant = -tp.c }, onComplete: () => {
+      tp.active = false
+      if (dir === 'out') avatar.root.visible = false; else clipPlane.constant = 5
+      resolve()
+    } })
+  })
+}
+export function setAvatarVisible(v: boolean) { applyClip(); avatar.root.visible = v; clipPlane.constant = v ? 5 : -5 }
+
 let closeUp = false
 const camBase = new THREE.Vector3(0, 1.05, 4.4), lookBase = new THREE.Vector3(0, 0.95, 0)
 const camPos = camBase.clone(), camLook = lookBase.clone()
@@ -135,6 +201,7 @@ function tick() {
   const dt = Math.min(clock.getDelta(), 0.05)
   const t = clock.elapsedTime
   avatar.update(dt)
+  stepParticles(dt)
   for (const r of rings) { r.rotation.z += dt * r.userData.speed * fx.ringSpeed * (r.userData.axis % 2 ? -1 : 1); r.position.y = r.userData.baseY + Math.sin(t * 0.5 + r.userData.axis) * 0.03 }
   moteMat.uniforms.uTime.value = t; moteMat.uniforms.uSpeed.value = fx.motes
   for (const h of halos) (h.material as THREE.MeshBasicMaterial).opacity = Math.min(1, h.userData.base * (glowOpacity + fx.flare * 2.5) * (0.85 + 0.15 * Math.sin(t * 1.3)))
@@ -164,7 +231,7 @@ export async function loadStage(onProgress: (f: number) => void) {
 }
 tick()
 
-export const stage = { avatar, narrator, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf }
+export const stage = { avatar, narrator, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAvatarPose, teleport, setAvatarVisible }
 ;(window as unknown as Record<string, unknown>).__stage = stage
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
 ;(window as unknown as Record<string, unknown>).__narrator = narrator

@@ -12,6 +12,7 @@
   </head>
   <body>
     <div class="bg" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="grid"></i><i class="scan"></i></div>
+    <div id="sets" aria-hidden="true"></div>
     <canvas id="stage" aria-label="Alok's digital avatar standing on a time-machine platform" role="img"></canvas>
     <div class="vignette" aria-hidden="true"></div>
 
@@ -33,6 +34,9 @@
         <p class="fine">This site plays audio after you click. Nothing is recorded or uploaded.</p>
       </div>
     </section>
+
+    <div id="props"></div>
+    <div id="traits" class="traits" aria-label="Words collected on the trip"></div>
 
     <!-- LOBBY UI -->
     <main id="app" class="hidden">
@@ -80,16 +84,6 @@
           <button id="ask-yes" class="btn primary">Yes, let's go</button>
           <button id="ask-no" class="btn ghost">Not now</button>
         </div>
-      </div>
-    </section>
-
-    <!-- ARRIVED (placeholder until the film exists) -->
-    <section id="arrived" class="screen hidden" aria-hidden="true">
-      <div class="glass card arrived-card">
-        <p class="eyebrow mono">destination locked · 2015</p>
-        <h2>Scene 0 · Signal from 2030</h2>
-        <p>The time machine works. The film itself, six scenes of my life, is the next thing being built.</p>
-        <button id="arrived-back" class="btn ghost">Back to the lab</button>
       </div>
     </section>
 

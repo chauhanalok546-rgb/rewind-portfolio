@@ -14,9 +14,13 @@ const noise = (c: AudioContext, seconds: number) => {
   const s = c.createBufferSource(); s.buffer = b; return s
 }
 
+export function audioGraph() { const c = ensure(); return { ctx: c, master: master! } }
+
 export const sfx = {
   /** Must be called from a click: unlocks audio and starts the faint lab hum. */
   unlock() { const c = ensure(); if (c.state === 'suspended') void c.resume(); this.startHum() },
+  suspend() { if (ctx && ctx.state === 'running') void ctx.suspend() },
+  resume() { if (ctx && ctx.state === 'suspended') void ctx.resume() },
   setMuted(m: boolean) { muted = m; if (master && ctx) master.gain.setTargetAtTime(m ? 0 : 1, ctx.currentTime, 0.05) },
   get muted() { return muted },
   startHum() {
