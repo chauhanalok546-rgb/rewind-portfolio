@@ -6,6 +6,7 @@ import { mountStickers, toast } from '../ui/stickers'
 import { startPresence, type Presence } from '../sense/presence'
 import { Recognizer, voiceSupported } from '../voice/recognizer'
 import { parseCommand } from '../voice/parse'
+import { initAsk } from './ask'
 
 /** The experience as an explicit state machine:  BOOT → ENTER → LOBBY → PRESENCE → GREETING → ASK → TRANSITION → ARRIVED
  *  (the film itself arrives in the next phase).  Any state can be jumped to with a URL hash, e.g. #ask or #lobby. */
@@ -114,7 +115,9 @@ function heard(text: string) {
   const el = document.createElement('div'); el.className = 'heard'; el.textContent = `“${text.trim()}”`
   document.getElementById('app')!.appendChild(el); setTimeout(() => el.remove(), 2500)
 }
+let askCapture: ((t: string) => void) | null = null   // set while the Ask Alok panel waits for a dictated question
 function handleSpeech(text: string) {
+  if (askCapture) { const f = askCapture; askCapture = null; f(text); return }
   const cmd = parseCommand(text, { asking: state === 'ASK', inFilm: state === 'FILM' || state === 'END' })
   if (!cmd) return
   heard(text); log(`Voice: ${cmd.type}${cmd.type === 'year' ? ' ' + cmd.year : ''}`)
@@ -145,6 +148,14 @@ function startVoice() {
   }
   recognizer.start()
   mic.addEventListener('click', () => recognizer.toggle())
+}
+
+function startListening(onText: (t: string) => void) {
+  if (!voiceSupported || recognizer.state === 'blocked') return false
+  askCapture = onText; recognizer.onFinal = handleSpeech
+  if (!recognizer.listening) recognizer.start()
+  setTimeout(() => { askCapture = null }, 15000)
+  return true
 }
 
 /* ---------- the Yes / No popup ---------- */
@@ -233,6 +244,7 @@ function wireControls() {
 
 export async function startApp() {
   mountStickers(); wireControls()
+  initAsk({ getState, caption, startListening })
   const hash = location.hash.replace('#', '')
   skipEnter = /^(lobby|ask|transition|film-scene\d)$/.test(hash)
   if (hash === 'dev') { (await import('../dev')).mountDev() }

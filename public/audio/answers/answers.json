@@ -1,0 +1,245 @@
+{
+ "voice": "en-IN-PrabhatNeural",
+ "answers": [
+  {
+   "id": "about",
+   "q": "Tell me about yourself",
+   "keys": [
+    "about yourself",
+    "introduce yourself",
+    "who are you",
+    "tell me about you",
+    "your story"
+   ],
+   "say": "I'm Alok, eighteen, from Uttarkashi, now a first-year Computer Science student at Newton School of Technology in Pune. I started with chess as a kid, picked up Java in Class nine, and now I build small tools and hackathon projects. This portfolio is the story, told out loud.",
+   "gesture": "present",
+   "mood": "happy",
+   "jumpTo": null,
+   "duration": 17.3
+  },
+  {
+   "id": "wispr",
+   "q": "Why Wispr Flow?",
+   "keys": [
+    "wispr",
+    "why do you want to join",
+    "why join",
+    "this internship",
+    "why flow"
+   ],
+   "say": "Because Wispr Flow is building the future of voice, and I believe in it. I want to learn how to build products people love. I even steered this whole portfolio by voice, so it felt like the right place to say it.",
+   "gesture": "talk1",
+   "mood": "happy",
+   "jumpTo": "scene5",
+   "duration": 12.58
+  },
+  {
+   "id": "setback",
+   "q": "Biggest setback",
+   "keys": [
+    "setback",
+    "failure",
+    "biggest challenge",
+    "hardest time",
+    "disappoint",
+    "learn from"
+   ],
+   "say": "This year I was recommended at the 1 AFSB in Dehradun on my first attempt, then ruled out at the medical stage because of a health issue. It hurt. But it pushed me to rebuild my plan, and that road led me to Newton School and to building things.",
+   "gesture": "talk2",
+   "mood": "serious",
+   "jumpTo": "scene3",
+   "duration": 15.06
+  },
+  {
+   "id": "proud",
+   "q": "Proudest project",
+   "keys": [
+    "proud",
+    "best project",
+    "favourite project",
+    "favorite project"
+   ],
+   "say": "Bug Slayer, built with two teammates at the Hacktoberfest hackathon at NST. It reads a project's README, runs the setup in a Docker sandbox, and when something breaks it uses Gemma to diagnose the error and patch the lines. Seeing it fix a broken setup on its own felt great.",
+   "gesture": "present",
+   "mood": "proud",
+   "jumpTo": "scene4",
+   "duration": 16.69
+  },
+  {
+   "id": "bugslayer",
+   "q": "How Bug Slayer works",
+   "keys": [
+    "bug slayer",
+    "bugslayer",
+    "how does it work",
+    "walk me through"
+   ],
+   "say": "Bug Slayer is a Python command line tool. It runs the setup steps from a project's README inside a Docker sandbox. When a step fails, it asks Gemma to diagnose the failure and then patches the broken lines, and tries again.",
+   "gesture": "talk1",
+   "mood": "neutral",
+   "jumpTo": "scene4",
+   "duration": 13.54
+  },
+  {
+   "id": "skills",
+   "q": "Technical skills",
+   "keys": [
+    "skills",
+    "technical",
+    "tech stack",
+    "what can you do",
+    "languages",
+    "programming"
+   ],
+   "say": "Python and Java mostly, plus Git, and I edit videos too. I also contribute to open source, and I submit an alpha on WorldQuant BRAIN every day to keep my problem solving sharp.",
+   "gesture": "talk2",
+   "mood": "neutral",
+   "jumpTo": "scene4",
+   "duration": 11.48
+  },
+  {
+   "id": "pressure",
+   "q": "Handling pressure",
+   "keys": [
+    "pressure",
+    "stress",
+    "deadline",
+    "under pressure"
+   ],
+   "say": "Basketball and chess taught me to stay calm and think a move ahead. I break the problem into small steps, and I keep playing even when the score is against me. Hackathons are a good example of that.",
+   "gesture": "talk1",
+   "mood": "neutral",
+   "jumpTo": null,
+   "duration": 11.93
+  },
+  {
+   "id": "team",
+   "q": "Working in a team",
+   "keys": [
+    "team",
+    "teamwork",
+    "collaborat",
+    "with others",
+    "teammate"
+   ],
+   "say": "I enjoy it. Bug Slayer was built with two teammates, and my Scratchathon team made it into the final ten out of eighty. I like agreeing on a plan quickly, sharing the load, and being honest when something is not working.",
+   "gesture": "talk2",
+   "mood": "happy",
+   "jumpTo": "scene4",
+   "duration": 13.26
+  },
+  {
+   "id": "learning",
+   "q": "Learning right now",
+   "keys": [
+    "learning right now",
+    "currently learning",
+    "what are you learning",
+    "studying"
+   ],
+   "say": "At Newton School I'm deepening Computer Science fundamentals, and building projects like CampusCompass, a campus navigation app. I'm also working toward Google Summer of Code, so open source is a big part of how I learn.",
+   "gesture": "talk1",
+   "mood": "neutral",
+   "jumpTo": "scene5",
+   "duration": 12.93
+  },
+  {
+   "id": "product",
+   "q": "Product to build",
+   "keys": [
+    "what product",
+    "would you build",
+    "own product",
+    "startup",
+    "build someday"
+   ],
+   "say": "Something that fills a real gap in the apps and tools people use every day. I don't have the final idea yet, but I'm collecting those small frustrations, and voice is a big part of how I think products should feel.",
+   "gesture": "present",
+   "mood": "happy",
+   "jumpTo": "scene5",
+   "duration": 12.21
+  },
+  {
+   "id": "pick",
+   "q": "Why pick you",
+   "keys": [
+    "why should we",
+    "pick you",
+    "hire you",
+    "choose you",
+    "why you"
+   ],
+   "say": "I learn fast, I ship things, and I stay calm when plans change. I'm eighteen, hungry to build products people love, and I'll work hard to earn the chance. This portfolio is a small proof of how I work.",
+   "gesture": "present",
+   "mood": "proud",
+   "jumpTo": null,
+   "duration": 12.91
+  },
+  {
+   "id": "outside",
+   "q": "Outside coding",
+   "keys": [
+    "outside coding",
+    "hobbies",
+    "free time",
+    "for fun",
+    "interests",
+    "basketball",
+    "chess"
+   ],
+   "say": "Chess, sudoku, video editing and basketball. I play power forward and center. I've played state level and inter-school games, won the CBSE cluster tournament, and played at the CBSE Nationals for Asian School.",
+   "gesture": "talk2",
+   "mood": "happy",
+   "jumpTo": "scene3",
+   "duration": 13.56
+  },
+  {
+   "id": "real",
+   "q": "Are you real",
+   "keys": [
+    "are you real",
+    "are you human",
+    "are you ai",
+    "are you a bot",
+    "real alok"
+   ],
+   "say": "I'm an AI version of Alok, built for this portfolio. The real Alok wrote the story and the facts I'm telling you. If you want the real one, find him on LinkedIn.",
+   "gesture": "talk1",
+   "mood": "happy",
+   "jumpTo": null,
+   "duration": 10.4
+  },
+  {
+   "id": "contact",
+   "q": "How to contact",
+   "keys": [
+    "contact you",
+    "reach you",
+    "linkedin",
+    "github",
+    "email",
+    "get in touch"
+   ],
+   "say": "You can find me on GitHub at chauhanalok546-rgb, and on LinkedIn as alok-chauhan-72a9603a1. I'll take you to the end card now.",
+   "gesture": "point",
+   "mood": "happy",
+   "jumpTo": "scene6",
+   "duration": 10.85
+  },
+  {
+   "id": "chess",
+   "q": "Chess and childhood",
+   "keys": [
+    "grandfather",
+    "uttarkashi",
+    "childhood",
+    "kid"
+   ],
+   "say": "My grandfather taught me chess around 2015, and I played with my brothers. In Class nine I won the intra-school chess championship. Little puzzles taught me patience.",
+   "gesture": "talk1",
+   "mood": "happy",
+   "jumpTo": "scene1",
+   "duration": 10.83
+  }
+ ]
+}

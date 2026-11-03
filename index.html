@@ -72,11 +72,19 @@
         <button id="c-next" class="icon" disabled title="Next scene (film arrives in the next phase)" aria-label="Next scene">⏭</button>
         <span class="chips" id="chips"></span>
         <button id="c-time" class="btn primary small" aria-label="Open the time machine">⟲ Time machine</button>
+        <button id="c-ask" class="btn small ghost" aria-label="Ask Alok a question" title="Ask Alok a question (A)">💬 Ask Alok</button>
         <button id="c-mic" class="icon" disabled aria-pressed="false" title="Voice commands (not available in this browser)" aria-label="Voice commands">🎙</button>
         <button id="c-cc" class="icon on" aria-pressed="true" title="Captions (C)" aria-label="Toggle captions">CC</button>
         <button id="c-snd" class="icon on" aria-pressed="true" title="Sound (S)" aria-label="Toggle sound">🔊</button>
         <button id="c-theme" class="icon" title="Switch bright lab / cinematic" aria-label="Switch theme">◐</button>
       </nav>
+      <section id="askbox" class="glass askbox hidden" aria-hidden="true" aria-label="Ask Alok">
+        <div class="askbox-head"><b>Ask Alok</b><button id="askbox-close" class="icon" aria-label="Close">✕</button></div>
+        <form id="askbox-form" class="askbox-form"><input id="askbox-input" type="text" maxlength="200" placeholder="Type your question" autocomplete="off" aria-label="Your question" />
+          <button id="askbox-mic" type="button" class="icon" aria-label="Speak your question" title="Speak your question">🎙</button><button class="btn primary small" type="submit">Ask</button></form>
+        <div id="askbox-chips" class="askbox-chips"></div>
+        <p class="fine">Only the text of your question is sent to answer it. No audio is stored.</p>
+      </section>
       <a class="classic" href="https://github.com/chauhanalok546-rgb/Portfolio" target="_blank" rel="noopener">Classic portfolio ↗</a>
     </main>
 

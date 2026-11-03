@@ -235,7 +235,9 @@ export class Avatar {
   setLookTarget(x: number, y: number) { if (performance.now() < this.lockUntil) return; this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
   blinkNow(duration = 0.16) { if (this.blinkT < 0) { this.blinkT = 0; this.blinkDur = duration } }
 
-  isSpeaking() { return !!(this.audio && !this.audio.paused && !this.audio.ended && (this.analyserMode || this.cues.length)) }
+  /** browser speech voice has no audio to analyse: a simple syllable-rate jaw flap stands in */
+  flapping = false
+  isSpeaking() { return this.flapping || !!(this.audio && !this.audio.paused && !this.audio.ended && (this.analyserMode || this.cues.length)) }
 
   setMuted(m: boolean) { this.muted = m; if (this.audio) this.audio.muted = m }
 
@@ -375,6 +377,10 @@ export class Avatar {
       // lips press together on sudden dips between words
       this.dip = damp(this.dip, o < 0.06 ? 1 : 0, 10, dt)
       this.want('viseme_PP', this.dip * 0.3 * (this.level > 0 ? 1 : 0))
+    } else if (this.flapping) {
+      const f = Math.max(0, Math.sin(t * 17) * 0.5 + Math.sin(t * 7.3) * 0.5)
+      this.level = damp(this.level, f * 0.7, 20, dt)
+      this.want(Math.sin(t * 5.1) > 0 ? 'viseme_aa' : 'viseme_O', this.level * 0.6)
     } else this.level = damp(this.level, 0, 12, dt)
 
     // ---- lip-sync: the current cue is held (no per-cue pulsing), mouth closes in silences
