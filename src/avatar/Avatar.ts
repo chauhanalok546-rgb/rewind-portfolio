@@ -172,7 +172,7 @@ export class Avatar {
           mat.alphaMap = mask; mat.alphaTest = 0.5; mat.needsUpdate = true
         }
       }
-      if (o.name === 'avaturn_hair_0') { mat.roughness = 0.5; mat.envMapIntensity = 1.4 }
+      if (o.name.startsWith('avaturn_hair')) { mat.roughness = 0.5; mat.envMapIntensity = 1.4 }
     })
     // soft contact shadow under the feet
     const c = document.createElement('canvas'); c.width = c.height = 128
