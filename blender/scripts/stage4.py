@@ -5,46 +5,48 @@ bpy.ops.wm.open_mainfile(filepath=S+"stage3.blend")
 arm=bpy.data.objects['Armature']; lk=bpy.data.objects['avaturn_look_0']
 # ---------- 1. fringe: bring the hair's front edge down to just above the brows, cut straight ----------
 h=bpy.data.objects['avaturn_hair_0']
-# ---- fringe: paint a blunt, slightly choppy hair band into the forehead skin texture ----
-import numpy as np, random
-body=bpy.data.objects['avaturn_body']
-mat=bpy.data.materials['avaturn_body_material']
-node=[n for n in mat.node_tree.nodes if n.type=='TEX_IMAGE' and any(l.to_socket.name=='Base Color' for o in n.outputs for l in o.links)][0]
-im=node.image; W,H=im.size
-px=np.array(im.pixels[:],dtype=np.float32).reshape(H,W,4)
-random.seed(11)
-lock=[random.uniform(-0.0022,0.0022) for _ in range(40)]
-def cut_z(x):
-    u=(x+0.09)/0.0070; i=int(u)%39; f=u-int(u)
-    base=lock[i]*(1-f)+lock[i+1]*f
-    fine=0.0007*math.sin(x*900)+0.0005*math.sin(x*1900+1)
-    return 1.762+base+fine+0.005*(x/0.07)**2+0.02*max(0,abs(x)-0.058)*3
-me=body.data; uvl=me.uv_layers.active.data
-rng=np.random.RandomState(3)
-for poly in me.polygons:
-    vs=[me.vertices[i].co for i in poly.vertices]
-    if min(v.y for v in vs)>-0.03 or max(v.z for v in vs)<1.745 or min(v.z for v in vs)>1.85: continue
-    loops=[uvl[i].uv for i in poly.loop_indices]
-    for k in range(1,len(loops)-1):
-        tri=[0,k,k+1]
-        uv=[(loops[t].x*W,loops[t].y*H) for t in tri]; P=[vs[t] for t in tri]
-        x0,x1=int(max(0,min(u[0] for u in uv)-1)),int(min(W-1,max(u[0] for u in uv)+1)); y0,y1=int(max(0,min(u[1] for u in uv)-1)),int(min(H-1,max(u[1] for u in uv)+1))
-        X,Y=np.meshgrid(np.arange(x0,x1+1)+0.5,np.arange(y0,y1+1)+0.5)
-        den=(uv[1][1]-uv[2][1])*(uv[0][0]-uv[2][0])+(uv[2][0]-uv[1][0])*(uv[0][1]-uv[2][1])
-        if abs(den)<1e-9: continue
-        l1=((uv[1][1]-uv[2][1])*(X-uv[2][0])+(uv[2][0]-uv[1][0])*(Y-uv[2][1]))/den
-        l2=((uv[2][1]-uv[0][1])*(X-uv[2][0])+(uv[0][0]-uv[2][0])*(Y-uv[2][1]))/den
-        l3=1-l1-l2; m=(l1>=-0.001)&(l2>=-0.001)&(l3>=-0.001)
-        wz=l1*P[0].z+l2*P[1].z+l3*P[2].z; wx=l1*P[0].x+l2*P[1].x+l3*P[2].x; wy=l1*P[0].y+l2*P[1].y+l3*P[2].y
-        cz=np.vectorize(cut_z)(wx)
-        a=np.clip((wz-cz)/0.0025,0,1)*(wy<-0.02)*m              # 1 above the cut, soft 1 mm edge
-        streak=0.018+0.012*rng.rand(*a.shape)
-        sub=px[y0:y1+1,x0:x1+1]
-        for c,col in enumerate((0.020,0.020,0.026)): sub[...,c]=sub[...,c]*(1-a)+(col+streak*0.3)*a
-        px[y0:y1+1,x0:x1+1]=sub
-tmp=bpy.data.images.new("face_tmp",W,H,alpha=False); tmp.pixels=px.ravel().tolist()
-tmp.filepath_raw=S+"face_fringe.png"; tmp.file_format='PNG'; tmp.save()
-ni=bpy.data.images.load(S+"face_fringe.png"); ni.colorspace_settings.name='sRGB'; ni.pack(); node.image=ni
+PAINT_FRINGE = False   # long hair has its own bangs
+if PAINT_FRINGE:
+    # ---- fringe: paint a blunt, slightly choppy hair band into the forehead skin texture ----
+    import numpy as np, random
+    body=bpy.data.objects['avaturn_body']
+    mat=bpy.data.materials['avaturn_body_material']
+    node=[n for n in mat.node_tree.nodes if n.type=='TEX_IMAGE' and any(l.to_socket.name=='Base Color' for o in n.outputs for l in o.links)][0]
+    im=node.image; W,H=im.size
+    px=np.array(im.pixels[:],dtype=np.float32).reshape(H,W,4)
+    random.seed(11)
+    lock=[random.uniform(-0.0022,0.0022) for _ in range(40)]
+    def cut_z(x):
+        u=(x+0.09)/0.0070; i=int(u)%39; f=u-int(u)
+        base=lock[i]*(1-f)+lock[i+1]*f
+        fine=0.0007*math.sin(x*900)+0.0005*math.sin(x*1900+1)
+        return 1.762+base+fine+0.005*(x/0.07)**2+0.02*max(0,abs(x)-0.058)*3
+    me=body.data; uvl=me.uv_layers.active.data
+    rng=np.random.RandomState(3)
+    for poly in me.polygons:
+        vs=[me.vertices[i].co for i in poly.vertices]
+        if min(v.y for v in vs)>-0.03 or max(v.z for v in vs)<1.745 or min(v.z for v in vs)>1.85: continue
+        loops=[uvl[i].uv for i in poly.loop_indices]
+        for k in range(1,len(loops)-1):
+            tri=[0,k,k+1]
+            uv=[(loops[t].x*W,loops[t].y*H) for t in tri]; P=[vs[t] for t in tri]
+            x0,x1=int(max(0,min(u[0] for u in uv)-1)),int(min(W-1,max(u[0] for u in uv)+1)); y0,y1=int(max(0,min(u[1] for u in uv)-1)),int(min(H-1,max(u[1] for u in uv)+1))
+            X,Y=np.meshgrid(np.arange(x0,x1+1)+0.5,np.arange(y0,y1+1)+0.5)
+            den=(uv[1][1]-uv[2][1])*(uv[0][0]-uv[2][0])+(uv[2][0]-uv[1][0])*(uv[0][1]-uv[2][1])
+            if abs(den)<1e-9: continue
+            l1=((uv[1][1]-uv[2][1])*(X-uv[2][0])+(uv[2][0]-uv[1][0])*(Y-uv[2][1]))/den
+            l2=((uv[2][1]-uv[0][1])*(X-uv[2][0])+(uv[0][0]-uv[2][0])*(Y-uv[2][1]))/den
+            l3=1-l1-l2; m=(l1>=-0.001)&(l2>=-0.001)&(l3>=-0.001)
+            wz=l1*P[0].z+l2*P[1].z+l3*P[2].z; wx=l1*P[0].x+l2*P[1].x+l3*P[2].x; wy=l1*P[0].y+l2*P[1].y+l3*P[2].y
+            cz=np.vectorize(cut_z)(wx)
+            a=np.clip((wz-cz)/0.0025,0,1)*(wy<-0.02)*m              # 1 above the cut, soft 1 mm edge
+            streak=0.018+0.012*rng.rand(*a.shape)
+            sub=px[y0:y1+1,x0:x1+1]
+            for c,col in enumerate((0.020,0.020,0.026)): sub[...,c]=sub[...,c]*(1-a)+(col+streak*0.3)*a
+            px[y0:y1+1,x0:x1+1]=sub
+    tmp=bpy.data.images.new("face_tmp",W,H,alpha=False); tmp.pixels=px.ravel().tolist()
+    tmp.filepath_raw=S+"face_fringe.png"; tmp.file_format='PNG'; tmp.save()
+    ni=bpy.data.images.load(S+"face_fringe.png"); ni.colorspace_settings.name='sRGB'; ni.pack(); node.image=ni
 # ---------- 2. Chrono details ----------
 def mat(name,col,emit=0.0,metal=0.0,rough=0.5):
     col=tuple(x**2.2 for x in col)

@@ -2,7 +2,7 @@ import bpy, bmesh, math, sys
 from mathutils import Vector
 S="/private/tmp/claude-501/-Users-alokchauhan-Documents-timetravel-portfolio/123eee09-8ca3-4ca7-a35c-368a2fe051a4/scratchpad/avatar/"
 bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.import_scene.gltf(filepath="/Users/alokchauhan/Documents/timetravel-portfolio/reference/avaturn-alok.glb")
+bpy.ops.import_scene.gltf(filepath="/Users/alokchauhan/Documents/timetravel-portfolio/reference/avaturn-alok-long.glb")
 bpy.data.objects.remove(bpy.data.objects['Icosphere'])
 arm=bpy.data.objects['Armature']; body=bpy.data.objects['avaturn_body']
 
