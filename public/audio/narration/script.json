@@ -1,7 +1,7 @@
 {
  "voice": {
-  "ALOK": "placeholder: macOS Rishi (replace with Alok's recording or clone)",
-  "ARM-01": "placeholder: synthetic with radio filter"
+  "ALOK": "Alok's own recording",
+  "ARM-01": "Alok's recording with a radio/robot filter"
  },
  "lines": [
   {
@@ -10,7 +10,7 @@
    "scene": "lobby",
    "gesture": "greet",
    "text": "Hello, and welcome to my lab. I'm Alok Chauhan, or at least the digital version of him. Thank you for taking the time to visit.",
-   "duration": 8.69
+   "duration": 15.92
   },
   {
    "id": "greet_2",
@@ -18,7 +18,7 @@
    "scene": "lobby",
    "gesture": "talk",
    "text": "I could simply tell you about myself, but I'd rather show you. Would you like to travel back in time with me, through my childhood, my wins, my setbacks and the things I've built?",
-   "duration": 11.33
+   "duration": 9.73
   },
   {
    "id": "yes_1",
@@ -26,7 +26,7 @@
    "scene": "lobby",
    "gesture": "talk",
    "text": "Great. Stay close to the platform.",
-   "duration": 2.42
+   "duration": 2.1
   },
   {
    "id": "s0_1",
@@ -34,7 +34,7 @@
    "scene": "scene0",
    "gesture": null,
    "text": "Time machine online. Incoming signal. Origin: 2030. Integrity: twelve percent. One name is readable: Alok Chauhan.",
-   "duration": 12.22
+   "duration": 8.91
   },
   {
    "id": "s0_2",
@@ -42,7 +42,7 @@
    "scene": "scene0",
    "gesture": "talk",
    "text": "That's me, a few years from now. In 2030, I'm building something people use every day. Let me show you how I got there.",
-   "duration": 8.86
+   "duration": 7.11
   },
   {
    "id": "s0_3",
@@ -50,7 +50,7 @@
    "scene": "scene0",
    "gesture": "talk",
    "text": "Hold on. We're going back.",
-   "duration": 2.01
+   "duration": 1.72
   },
   {
    "id": "s1_1",
@@ -58,7 +58,7 @@
    "scene": "scene1",
    "gesture": "talk",
    "text": "First stop: Uttarkashi. A small town between big mountains, and a kid with far too many questions. That's me.",
-   "duration": 7.77
+   "duration": 7.67
   },
   {
    "id": "s1_2",
@@ -66,7 +66,7 @@
    "scene": "scene1",
    "gesture": "present",
    "text": "This is my grandfather, teaching me chess. His first lesson wasn't how the pieces move. It was how to think before I move them.",
-   "duration": 8.07
+   "duration": 7.16
   },
   {
    "id": "s1_3",
@@ -74,7 +74,7 @@
    "scene": "scene1",
    "gesture": "talk",
    "text": "Soon I was beating my brothers, then filling in every puzzle in the newspaper, then sitting olympiads. If a problem had one right answer, I wanted to find it.",
-   "duration": 10.69
+   "duration": 8.28
   },
   {
    "id": "s1_4",
@@ -82,7 +82,7 @@
    "scene": "scene1",
    "gesture": "talk",
    "text": "So the logic didn't start with code. It started right here.",
-   "duration": 3.95
+   "duration": 3.3
   },
   {
    "id": "s2_1",
@@ -90,7 +90,7 @@
    "scene": "scene2",
    "gesture": "talk",
    "text": "Class 9 was a busy year. I won the school chess championship, and then I walked into the computer lab and met Java.",
-   "duration": 7.69
+   "duration": 6.71
   },
   {
    "id": "s2_2",
@@ -98,7 +98,7 @@
    "scene": "scene2",
    "gesture": "talk",
    "text": "I didn't want to stop at syntax. I wanted to build things: software, apps, anything that actually worked.",
-   "duration": 7.92
+   "duration": 5.56
   },
   {
    "id": "s2_3",
@@ -106,7 +106,7 @@
    "scene": "scene2",
    "gesture": "talk",
    "text": "Class 10: 93%. Then I went up into the mountains I grew up under.",
-   "duration": 5.74
+   "duration": 4.47
   },
   {
    "id": "s2_4",
@@ -114,7 +114,7 @@
    "scene": "scene2",
    "gesture": null,
    "text": "Note: I am not built for snow.",
-   "duration": 2.93
+   "duration": 2.21
   },
   {
    "id": "s2_5",
@@ -122,7 +122,7 @@
    "scene": "scene2",
    "gesture": "talk",
    "text": "Fourteen days at the Nehru Institute of Mountaineering. Climb, rope up, survive the cold nights. Mountaineering and debugging share one rule: don't panic, check the next step.",
-   "duration": 11.9
+   "duration": 9.01
   },
   {
    "id": "s3_1",
@@ -130,7 +130,7 @@
    "scene": "scene3",
    "gesture": "talk",
    "text": "After Class 10, I made my first big decision on my own. I left home to board at Asian School in Dehradun for Classes 11 and 12, chasing better opportunities. New city, new hostel, same habits.",
-   "duration": 14.43
+   "duration": 10.26
   },
   {
    "id": "s3_2",
@@ -138,7 +138,7 @@
    "scene": "scene3",
    "gesture": "talk",
    "text": "On court, I play power forward and center, the position that does the hard work under the basket. State-level games, inter-school tournaments, a CBSE cluster title, and then the CBSE Nationals.",
-   "duration": 12.73
+   "duration": 11.43
   },
   {
    "id": "s3_3",
@@ -146,7 +146,7 @@
    "scene": "scene3",
    "gesture": "talk",
    "text": "And off the court, 90% in Class 12.",
-   "duration": 3.19
+   "duration": 2.54
   },
   {
    "id": "s3_4",
@@ -154,7 +154,7 @@
    "scene": "scene3",
    "gesture": "talk",
    "text": "In 2026, alongside my Class 12 boards, I chased another dream: the armed forces. I qualified the NDA written exam that April, then prepared for the SSB, a five-day board that tests leadership, personality and every skill you have.",
-   "duration": 17.68
+   "duration": 13.79
   },
   {
    "id": "s3_5",
@@ -162,7 +162,7 @@
    "scene": "scene3",
    "gesture": "serious",
    "text": "I was recommended at 1 AFSB Dehradun on my first attempt. Then, at the medical stage, I was ruled out because of a health issue.",
-   "duration": 9.27
+   "duration": 6.37
   },
   {
    "id": "s3_6",
@@ -170,7 +170,7 @@
    "scene": "scene3",
    "gesture": "talk",
    "text": "That was hard. But when one route closes, you find another way to the top. Timelines break sometimes. What matters is what you build next.",
-   "duration": 9.26
+   "duration": 8.69
   },
   {
    "id": "s4_1",
@@ -178,7 +178,7 @@
    "scene": "scene4",
    "gesture": "talk",
    "text": "The new path led to Pune. Newton School of Technology, first year of Computer Science. This is where things start compiling.",
-   "duration": 8.35
+   "duration": 6.11
   },
   {
    "id": "s4_2",
@@ -186,7 +186,7 @@
    "scene": "scene4",
    "gesture": "talk",
    "text": "At Scratchathon, our college's game-building hackathon, 80 teams built games and only 10 reached the final presentation. My team was one of them.",
-   "duration": 9.55
+   "duration": 7.31
   },
   {
    "id": "s4_3",
@@ -194,7 +194,7 @@
    "scene": "scene4",
    "gesture": "talk",
    "text": "Then came the Hacktoberfest hackathon at NST, and I cleared the first round there too.",
-   "duration": 5.32
+   "duration": 4.09
   },
   {
    "id": "s4_4",
@@ -202,7 +202,7 @@
    "scene": "scene4",
    "gesture": "talk",
    "text": "There, with two teammates, I built Bug Slayer: a command-line tool that runs a project's README in a sandbox, finds the steps that break, and fixes them.",
-   "duration": 10.44
+   "duration": 7.49
   },
   {
    "id": "s4_5",
@@ -210,7 +210,7 @@
    "scene": "scene4",
    "gesture": "talk",
    "text": "I ship personal projects, I contribute to open source one pull request at a time, and every single day I submit a new alpha on WorldQuant BRAIN. Consistency is my favourite algorithm.",
-   "duration": 12.29
+   "duration": 9.11
   },
   {
    "id": "s4_6",
@@ -218,7 +218,7 @@
    "scene": "scene4",
    "gesture": "talk",
    "text": "And when I switch off? Sudoku, video editing and chess. I can't stop solving things.",
-   "duration": 6.18
+   "duration": 4.38
   },
   {
    "id": "s5_1",
@@ -226,7 +226,7 @@
    "scene": "scene5",
    "gesture": "talk",
    "text": "Now let's look forward. The next checkpoint is Google Summer of Code.",
-   "duration": 4.28
+   "duration": 3.51
   },
   {
    "id": "s5_2",
@@ -234,7 +234,7 @@
    "scene": "scene5",
    "gesture": "talk",
    "text": "Further out is my bigger goal: my own product. I look for the gaps in the apps and tools we use every day, the places where something is missing, and I want to build the thing that fills one.",
-   "duration": 12.01
+   "duration": 8.35
   },
   {
    "id": "s5_3",
@@ -242,7 +242,7 @@
    "scene": "scene5",
    "gesture": "present",
    "text": "And this bright branch runs through Wispr Flow, a team building the future of voice. You've been steering this whole trip with your voice. That's the kind of product I want to help build.",
-   "duration": 10.97
+   "duration": 9.51
   },
   {
    "id": "s5_4",
@@ -250,7 +250,7 @@
    "scene": "scene5",
    "gesture": null,
    "text": "Signal decoded. One hundred percent.",
-   "duration": 3.63
+   "duration": 1.89
   },
   {
    "id": "s6_1",
@@ -258,7 +258,7 @@
    "scene": "scene6",
    "gesture": "talk",
    "text": "Mission complete. We're back in 2026.",
-   "duration": 3.64
+   "duration": 2.53
   },
   {
    "id": "s6_2",
@@ -266,7 +266,7 @@
    "scene": "scene6",
    "gesture": "talk",
    "text": "Here's what we found: a kid who thought before he moved, an athlete who did the hard work under the basket, a climber who kept going, and a builder who rebuilt his path when it broke.",
-   "duration": 10.98
+   "duration": 9.24
   },
   {
    "id": "s6_3",
@@ -274,7 +274,7 @@
    "scene": "scene6",
    "gesture": "proud",
    "text": "That's my story so far. The next chapter needs a co-author. Maybe that's you.",
-   "duration": 5.16
+   "duration": 4.39
   }
  ]
 }
