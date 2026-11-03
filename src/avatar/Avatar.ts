@@ -11,6 +11,36 @@ const EXPRESSIONS: Record<Expression, Record<string, number>> = {
   proud: { mouthSmileLeft: 0.22, mouthSmileRight: 0.22, browInnerUp: 0.05, browOuterUpLeft: 0.18, browOuterUpRight: 0.18 },
 }
 
+
+export type Gesture = 'wave' | 'namaste' | 'snap' | 'thumbs_up' | 'talk1' | 'talk2' | 'present' | 'point'
+
+type V3 = [number, number, number]
+interface ArmPose { arm: V3; fore: V3; hand?: V3; fingers?: number[] }   // fingers: thumb, index, middle, ring, pinky curl 0..1
+interface GesturePose { L?: ArmPose; R?: ArmPose }
+interface GestureDef { dur: number; pose: (t: number) => GesturePose }
+
+const REST_ARM: ArmPose = { arm: [0.12, -1, 0.02], fore: [0.10, -1, 0.22], fingers: [0.15, 0.2, 0.2, 0.2, 0.2] }
+const osc = (t: number, hz: number) => Math.sin(t * Math.PI * 2 * hz)
+const GESTURES: Record<Gesture, GestureDef> = {
+  wave: { dur: 2.6, pose: (t) => ({ R: { arm: [1, 0.30, 0.05], fore: [0.15 + osc(t, 2.4) * 0.55, 1, 0.08], fingers: [0, 0, 0, 0, 0] } }) },
+  namaste: { dur: 2.8, pose: () => ({
+    L: { arm: [0.18, -0.9, 0.32], fore: [-0.55, 0.5, 0.68], fingers: [0, 0, 0, 0, 0] },
+    R: { arm: [0.18, -0.9, 0.32], fore: [-0.55, 0.5, 0.68], fingers: [0, 0, 0, 0, 0] } }) },
+  snap: { dur: 1.5, pose: (t) => {
+    const flick = t > 0.78 && t < 0.9 ? 1 : 0                       // middle finger slips off the thumb
+    const press = t < 0.78 ? Math.min(1, t / 0.5) : 0
+    return { R: { arm: [0.28, -0.75, 0.55], fore: [-0.1, 0.78, 0.6], fingers: [0.3 + press * 0.3, 0.9, 0.9 * press + 0.5 * (1 - press) - flick * 0.9, 0.9, 0.9] } }
+  } },
+  thumbs_up: { dur: 2.0, pose: () => ({ R: { arm: [0.3, -0.8, 0.5], fore: [0.12, 0.55, 0.85], fingers: [0, 1, 1, 1, 1] } }) },
+  talk1: { dur: 2.2, pose: (t) => ({ R: { arm: [0.38, -0.85, 0.4], fore: [0.2 + osc(t, 0.7) * 0.15, 0.2 + osc(t, 1.4) * 0.12, 1], fingers: [0.15, 0.2, 0.25, 0.3, 0.3] } }) },
+  talk2: { dur: 2.6, pose: (t) => ({
+    L: { arm: [0.45, -0.8, 0.4], fore: [0.3, 0.15 + osc(t, 1.1) * 0.12, 1], fingers: [0.1, 0.15, 0.2, 0.25, 0.3] },
+    R: { arm: [0.45, -0.8, 0.4], fore: [0.3, 0.15 + osc(t + 0.3, 1.1) * 0.12, 1], fingers: [0.1, 0.15, 0.2, 0.25, 0.3] } }) },
+  present: { dur: 2.4, pose: () => ({ R: { arm: [0.6, -0.7, 0.4], fore: [0.55, 0.2, 0.8], fingers: [0.05, 0.05, 0.05, 0.05, 0.05] } }) },
+  point: { dur: 2.2, pose: () => ({ R: { arm: [1, -0.15, 0.25], fore: [1, 0.0, 0.3], fingers: [0.6, 0, 1, 1, 1] } }) },
+}
+const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
+
 export interface VisemeCue { t: number; d: number; v: string }
 
 const MAX_YAW = THREE.MathUtils.degToRad(35)
@@ -18,6 +48,8 @@ const MAX_PITCH = THREE.MathUtils.degToRad(15)
 const damp = (a: number, b: number, k: number, dt: number) => a + (b - a) * (1 - Math.exp(-k * dt))
 
 /** Loads avatar.glb and drives idle breathing, blinking, eye/head look-at and viseme lip-sync. */
+const speakingNow = (a: { audio?: HTMLAudioElement; cues: VisemeCue[] }) => !!(a.audio && !a.audio.paused && a.cues.length)
+
 export class Avatar {
   readonly root = new THREE.Group()
   private morphMeshes: THREE.Mesh[] = []
@@ -31,8 +63,8 @@ export class Avatar {
   private blinkT = -1
   private doubleBlink = false
   private clock = 0
-  private cues: VisemeCue[] = []
-  private audio?: HTMLAudioElement
+  cues: VisemeCue[] = []
+  audio?: HTMLAudioElement
   private expr: Expression = 'neutral'
   private exprMix = new Map<string, number>()
   private saccade = new THREE.Vector2()
@@ -40,6 +72,9 @@ export class Avatar {
   private weightShift = 0
   private weightShiftTarget = 0
   private weightT = 6
+  private gesture?: { def: GestureDef; t: number; name: Gesture; fired: boolean }
+  private gestureBlend = 0
+  private nextTalkGesture = 1.2
 
   async load(url: string) {
     const gltf = await new GLTFLoader().loadAsync(url)
@@ -88,6 +123,12 @@ export class Avatar {
     this.rest.set(bone.name, bone.quaternion.clone())
   }
 
+  /** Fired at key moments of a gesture (e.g. 'snap' when the fingers slip, for the sound and the white flash). */
+  onEvent?: (name: 'snap') => void
+
+  play(g: Gesture) { this.gesture = { def: GESTURES[g], t: 0, name: g, fired: false } }
+  get gestureActive() { return !!this.gesture }
+
   setExpression(e: Expression) { this.expr = e }
 
   setLookTarget(x: number, y: number) { this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
@@ -115,6 +156,8 @@ export class Avatar {
     const breath = Math.sin(this.clock * 1.6)
     if (spine2) spine2.quaternion.copy(this.rest.get('Spine2')!).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(breath * 0.012, 0, Math.sin(this.clock * 0.5) * 0.006)))
     if (spine) spine.quaternion.copy(this.rest.get('Spine')!).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.sin(this.clock * 0.35) * 0.015, 0)))
+
+    this.updateGesture(dt, speakingNow(this))
 
     // saccades: small quick eye glances every 0.5-2 s (eyes lead, head barely follows)
     this.saccadeT -= dt
@@ -203,6 +246,65 @@ export class Avatar {
     const b = this.bones.get(boneName); const r = this.rest.get(boneName)
     if (!b || !r) return
     b.quaternion.copy(r).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ')))
+  }
+
+
+  /** Poses the arms/hands for the active gesture (blended in/out); bones are reset to the relaxed rest first. */
+  private updateGesture(dt: number, speaking: boolean) {
+    // while talking, throw in an occasional talking gesture
+    if (speaking && !this.gesture) {
+      this.nextTalkGesture -= dt
+      if (this.nextTalkGesture <= 0) {
+        this.nextTalkGesture = 1 + Math.random() * 1.5
+        this.play((['talk1', 'talk2', 'present'] as Gesture[])[Math.floor(Math.random() * 3)])
+      }
+    }
+    let w = 0
+    let pose: GesturePose = {}
+    if (this.gesture) {
+      this.gesture.t += dt
+      const { def, t } = this.gesture
+      if (this.gesture.name === 'snap' && !this.gesture.fired && t >= 0.8) { this.gesture.fired = true; this.onEvent?.('snap') }
+      if (t >= def.dur) this.gesture = undefined
+      else { w = smooth(0, 0.4, t) * smooth(0, 0.45, def.dur - t); pose = def.pose(t) }
+    }
+    if (w <= 0 && this.gestureBlend <= 0) return
+    this.gestureBlend = w
+    for (const side of ['Left', 'Right'] as const) {
+      const key = side === 'Left' ? 'L' : 'R'
+      const target = pose[key]
+      this.poseArm(side, target ?? REST_ARM, target ? w : 0)
+    }
+  }
+
+  private poseArm(side: 'Left' | 'Right', p: ArmPose, w: number) {
+    const sgn = side === 'Left' ? 1 : -1
+    const arm = this.bones.get(side + 'Arm'), fore = this.bones.get(side + 'ForeArm'), hand = this.bones.get(side + 'Hand')
+    if (!arm || !fore || !hand) return
+    for (const b of [arm, fore, hand]) b.quaternion.copy(this.rest.get(b.name)!)
+    arm.updateWorldMatrix(false, true)
+    const mix = (a: V3, b: V3) => new THREE.Vector3(a[0] * sgn, a[1], a[2]).normalize().lerp(new THREE.Vector3(b[0] * sgn, b[1], b[2]).normalize(), w).normalize()
+    this.aim(arm, fore, mix(REST_ARM.arm, p.arm)); arm.updateWorldMatrix(false, true)
+    this.aim(fore, hand, mix(REST_ARM.fore, p.fore)); fore.updateWorldMatrix(false, true)
+    if (p.hand) { this.aim(hand, hand.children[0] as THREE.Bone, mix(p.fore, p.hand)); }
+    const names = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']
+    const base = REST_ARM.fingers!, tgt = p.fingers ?? base
+    names.forEach((f, i) => {
+      const curl = base[i] + (tgt[i] - base[i]) * w
+      ;[1, 2, 3].forEach((seg, j) => {
+        const b = this.bones.get(`${side}Hand${f}${seg}`)
+        if (b) { b.quaternion.copy(this.rest.get(b.name)!); b.rotateX(curl * [0.95, 1.2, 0.8][j] * (f === 'Thumb' ? 0.55 : 1)) }
+      })
+    })
+  }
+
+  private aim(bone: THREE.Bone, child: THREE.Bone, dirWorld: THREE.Vector3) {
+    const p = bone.getWorldPosition(new THREE.Vector3())
+    const cur = child.getWorldPosition(new THREE.Vector3()).sub(p).normalize()
+    const delta = new THREE.Quaternion().setFromUnitVectors(cur, dirWorld)
+    const boneWorldQ = bone.getWorldQuaternion(new THREE.Quaternion())
+    const parentWorldQ = (bone.parent as THREE.Object3D).getWorldQuaternion(new THREE.Quaternion())
+    bone.quaternion.copy(parentWorldQ.invert().multiply(delta).multiply(boneWorldQ))
   }
 
   headPosition(): THREE.Vector3 {

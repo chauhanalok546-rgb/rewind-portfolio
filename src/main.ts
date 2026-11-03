@@ -1,7 +1,7 @@
 import './style.css'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { Avatar, type Expression } from './avatar/Avatar'
+import { Avatar, type Expression, type Gesture } from './avatar/Avatar'
 
 const canvas = document.getElementById('stage') as HTMLCanvasElement
 const statusEl = document.getElementById('status')!
@@ -109,6 +109,12 @@ for (const e of ['neutral', 'happy', 'serious', 'proud'] as Expression[]) {
   document.getElementById('ex-' + e)!.addEventListener('click', () => avatar.setExpression(e))
 }
 
+const gestureRow = document.getElementById('gestures')!
+for (const g of ['wave', 'namaste', 'snap', 'thumbs_up', 'talk1', 'talk2', 'present', 'point'] as Gesture[]) {
+  const b = document.createElement('button'); b.textContent = g.replace('_', ' ')
+  b.addEventListener('click', () => avatar.play(g)); gestureRow.appendChild(b)
+}
 // debug hooks for automated checks
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
+;(window as unknown as Record<string, unknown>).__cam = { camPos, camLook }
 tick()
