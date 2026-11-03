@@ -47,6 +47,40 @@ if PAINT_FRINGE:
     tmp=bpy.data.images.new("face_tmp",W,H,alpha=False); tmp.pixels=px.ravel().tolist()
     tmp.filepath_raw=S+"face_fringe.png"; tmp.file_format='PNG'; tmp.save()
     ni=bpy.data.images.load(S+"face_fringe.png"); ni.colorspace_settings.name='sRGB'; ni.pack(); node.image=ni
+# ---- eye life: catchlights on the painted irises, slightly deeper limbal edge ----
+import numpy as np
+_body=bpy.data.objects['avaturn_body']; _mat=bpy.data.materials['avaturn_body_material']
+_node=[n for n in _mat.node_tree.nodes if n.type=='TEX_IMAGE' and any(l.to_socket.name=='Base Color' for o in n.outputs for l in o.links)][0]
+_im=_node.image; _W,_H=_im.size
+_px=np.array(_im.pixels[:],dtype=np.float32).reshape(_H,_W,4)
+EYE=[(-0.035,1.7195),(0.035,1.7195)]
+_me=_body.data; _uv=_me.uv_layers.active.data
+for poly in _me.polygons:
+    vs=[_me.vertices[i].co for i in poly.vertices]
+    if min(v.y for v in vs)>-0.03 or max(v.z for v in vs)<1.70 or min(v.z for v in vs)>1.74 or max(abs(v.x) for v in vs)<0.015 or min(abs(v.x) for v in vs)>0.06: continue
+    loops=[_uv[i].uv for i in poly.loop_indices]
+    for k in range(1,len(loops)-1):
+        tri=[0,k,k+1]; uv=[(loops[t].x*_W,loops[t].y*_H) for t in tri]; P=[vs[t] for t in tri]
+        x0,x1=int(max(0,min(u[0] for u in uv)-1)),int(min(_W-1,max(u[0] for u in uv)+1)); y0,y1=int(max(0,min(u[1] for u in uv)-1)),int(min(_H-1,max(u[1] for u in uv)+1))
+        X,Y=np.meshgrid(np.arange(x0,x1+1)+0.5,np.arange(y0,y1+1)+0.5)
+        den=(uv[1][1]-uv[2][1])*(uv[0][0]-uv[2][0])+(uv[2][0]-uv[1][0])*(uv[0][1]-uv[2][1])
+        if abs(den)<1e-9: continue
+        l1=((uv[1][1]-uv[2][1])*(X-uv[2][0])+(uv[2][0]-uv[1][0])*(Y-uv[2][1]))/den
+        l2=((uv[2][1]-uv[0][1])*(X-uv[2][0])+(uv[0][0]-uv[2][0])*(Y-uv[2][1]))/den
+        l3=1-l1-l2; m=(l1>=-0.001)&(l2>=-0.001)&(l3>=-0.001)
+        wx=l1*P[0].x+l2*P[1].x+l3*P[2].x; wz=l1*P[0].z+l2*P[1].z+l3*P[2].z
+        sub=_px[y0:y1+1,x0:x1+1]
+        for ex,ez in EYE:
+            cx=ex+(-0.0028 if ex>0 else 0.0028)*-1; cz=ez+0.0030          # glint up and toward the key light
+            g=np.exp(-(((wx-cx)**2)+((wz-cz)**2))/(2*0.0011**2))*m
+            ring=np.exp(-((np.sqrt((wx-ex)**2+(wz-ez)**2)-0.0058)**2)/(2*0.0007**2))*m*0.35   # limbal ring
+            for c in range(3): sub[...,c]=sub[...,c]*(1-ring)+sub[...,c]*0.55*ring
+            for c in range(3): sub[...,c]=sub[...,c]*(1-0.92*g)+0.97*0.92*g
+        _px[y0:y1+1,x0:x1+1]=sub
+_tmp=bpy.data.images.new("face_eyes_tmp",_W,_H,alpha=False); _tmp.pixels=_px.ravel().tolist()
+_tmp.filepath_raw=S+"face_eyes.png"; _tmp.file_format='PNG'; _tmp.save()
+_ni=bpy.data.images.load(S+"face_eyes.png"); _ni.colorspace_settings.name='sRGB'; _ni.pack(); _node.image=_ni
+
 # ---------- 2. Chrono details ----------
 def mat(name,col,emit=0.0,metal=0.0,rough=0.5):
     col=tuple(x**2.2 for x in col)
