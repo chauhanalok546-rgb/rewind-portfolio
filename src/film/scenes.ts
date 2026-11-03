@@ -1,6 +1,6 @@
 import { gsap, h, mountains } from './dom'
 import type { Mood } from '../audio/music'
-import { setSignal } from '../app/hud'
+import { reduced, setSignal } from '../app/hud'
 
 export interface SceneCtx {
   id: string
@@ -24,6 +24,17 @@ export interface SceneDef {
   enter(c: SceneCtx): void
 }
 
+/** Phase 8: a Blender-rendered establishing shot loops behind the scene. It only replaces the CSS art once it can play;
+ *  with reduced motion, data-saver or any video error the hand-made CSS backdrop stays as it was. */
+function backdrop(set: HTMLElement, name: string) {
+  const nav = navigator as Navigator & { connection?: { saveData?: boolean } }
+  if (reduced || nav.connection?.saveData) return
+  const v = document.createElement('video')
+  v.className = 'bgvid'; v.src = `/video/${name}.mp4`; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.setAttribute('aria-hidden', 'true')
+  v.addEventListener('playing', () => set.classList.add('has-video'), { once: true })
+  v.addEventListener('error', () => v.remove(), { once: true })
+  set.prepend(v); void v.play().catch(() => v.remove())
+}
 const sky = (c: string[]) => `linear-gradient(180deg, ${c.join(', ')})`
 const card = (cls: string, inner: string) => `<div class="prop card2 ${cls}">${inner}</div>`
 const pop = (c: SceneCtx, el: HTMLElement, t: number, out?: number) => {
@@ -55,6 +66,7 @@ const scene1: SceneDef = {
     const set = c.add<HTMLElement>(`<div class="set" style="background:${sky(['#ffcf9e', '#ffe6c4', '#f9efe0'])}">
       <div class="sun"></div>${mountains(['#b6c3d6', '#8da3c1', '#647fa6', '#3f5a82'])}
       <svg class="house" viewBox="0 0 160 110"><path d="M10 100V55l70-42 70 42v45z" fill="#4a3a30"/><path d="M0 58l80-48 80 48" fill="none" stroke="#2a211b" stroke-width="7" stroke-linejoin="round"/><rect x="62" y="62" width="36" height="38" fill="#ffb020"><animate attributeName="opacity" values=".85;1;.85" dur="3s" repeatCount="indefinite"/></rect></svg></div>`, 'sets')
+    backdrop(set, 'scene1')
     c.tl.fromTo(set, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2 }, 0)
     c.banner('Uttarkashi', '2015')
     // chess: grandfather's lesson, the pawn advances by itself after 3 s (or when pushed)
@@ -93,6 +105,7 @@ const scene2: SceneDef = {
   id: 'scene2', year: 2023, place: 'Uttarkashi, IN', lines: ['s2_1', 's2_2', 's2_3', 's2_4', 's2_5'], music: 'strings', avatar: { x: -1.0, yaw: 0.35 },
   enter(c) {
     const hall = c.add<HTMLElement>(`<div class="set" style="background:radial-gradient(ellipse at 60% 30%, #3a4a68 0%, #151f33 60%, #0b111c 100%)"><div class="spot"></div></div>`, 'sets')
+    backdrop(hall, 'scene2')
     c.tl.fromTo(hall, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1 }, 0)
     c.banner('MDS Uttarkashi', 'Class 9 and 10')
     // beat 1: school chess championship, the trophy glints
@@ -127,6 +140,7 @@ const scene3: SceneDef = {
   enter(c) {
     const set = c.add<HTMLElement>(`<div class="set" style="background:${sky(['#2a3b5a', '#4a5f84', '#d8c9b4'])}"><div class="skyline"></div>
       <svg class="bus" viewBox="0 0 220 90"><rect x="6" y="14" width="200" height="52" rx="12" fill="#ffb020"/><g fill="#0e1726" opacity=".85"><rect x="20" y="24" width="30" height="20" rx="3"/><rect x="58" y="24" width="30" height="20" rx="3"/><rect x="96" y="24" width="30" height="20" rx="3"/><rect x="134" y="24" width="30" height="20" rx="3"/></g><circle cx="52" cy="70" r="12" fill="#0e1726"/><circle cx="156" cy="70" r="12" fill="#0e1726"/></svg><div class="road"></div></div>`, 'sets')
+    backdrop(set, 'scene3')
     c.tl.fromTo(set, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1 }, 0)
     c.tl.fromTo(set.querySelector('.bus'), { x: '-30vw' }, { x: '115vw', duration: 8, ease: 'none' }, 0.2)
     c.banner('Dehradun', 'Asian School · Classes 11 and 12')
@@ -176,6 +190,7 @@ const scene4: SceneDef = {
   id: 'scene4', year: 2026, place: 'Pune, IN', lines: ['s4_1', 's4_2', 's4_3', 's4_4', 's4_5', 's4_6'], music: 'beat', extra: 5, avatar: { x: -1.0, yaw: 0.35 },
   enter(c) {
     const set = c.add<HTMLElement>(`<div class="set" style="background:radial-gradient(ellipse at 70% 30%, #12213a 0%, #070c16 70%)"><div class="codefall"></div></div>`, 'sets')
+    backdrop(set, 'scene4')
     c.tl.fromTo(set, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8 }, 0)
     c.banner('Newton School of Technology', 'Pune · first year of Computer Science')
     // Scratchathon: 80 teams, 10 reach the final presentation
@@ -237,6 +252,7 @@ const scene5: SceneDef = {
   id: 'scene5', year: 2030, place: 'the future', lines: ['s5_1', 's5_2', 's5_3', 's5_4'], music: 'swell', avatar: { x: -1.0, yaw: 0.35 },
   enter(c) {
     const set = c.add<HTMLElement>(`<div class="set" style="background:radial-gradient(ellipse at 60% 40%, #16264a 0%, #070c16 70%)"><div class="stars"></div></div>`, 'sets')
+    backdrop(set, 'scene5')
     c.tl.fromTo(set, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2 }, 0)
     c.banner('Timelines not yet written', 'the future')
     const map = c.add<HTMLElement>(`<svg class="prop map right" viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg">
