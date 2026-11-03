@@ -1,7 +1,7 @@
 import { SYSTEM_PROMPT } from './_prompt.js'
 
 /** POST /api/ask  { q: string }  ->  { say, gesture, mood, jumpTo }
- *  Calls the Claude API with the server-side system prompt. The key lives only in the ANTHROPIC_API_KEY environment variable.
+ *  Calls Claude (ANTHROPIC_API_KEY) or, if only that is set, Gemini (GEMINI_API_KEY) with the server-side system prompt. Keys live only in environment variables.
  *  With no key, an error, or a slow answer the response is a non-200 and the browser falls back to canned answers. */
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5'
 const LIMIT = 20, WINDOW = 3600_000
@@ -23,8 +23,8 @@ function limited(ip: string) {
 export default async function handler(req: Req, res: Res) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' })
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) return res.status(503).json({ error: 'brain offline' })
+  const key = process.env.ANTHROPIC_API_KEY, gem = process.env.GEMINI_API_KEY
+  if (!key && !gem) return res.status(503).json({ error: 'brain offline' })
   const fwd = req.headers['x-forwarded-for']
   const ip = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0].trim() || req.socket?.remoteAddress || 'unknown'
   if (limited(ip)) return res.status(429).json({ error: 'too many questions, try again later' })
@@ -32,15 +32,29 @@ export default async function handler(req: Req, res: Res) {
   const q = typeof body?.q === 'string' ? body.q.trim().slice(0, 300) : ''
   if (q.length < 2) return res.status(400).json({ error: 'empty question' })
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 300, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: q }] }),
-      signal: AbortSignal.timeout(7500),
-    })
-    if (!r.ok) return res.status(502).json({ error: 'upstream ' + r.status })
-    const data = (await r.json()) as { content?: { type: string; text?: string }[] }
-    const text = data.content?.find((c) => c.type === 'text')?.text ?? ''
+    let text = ''
+    if (key) {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: MODEL, max_tokens: 300, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: q }] }),
+        signal: AbortSignal.timeout(7500),
+      })
+      if (!r.ok) return res.status(502).json({ error: 'upstream ' + r.status })
+      const data = (await r.json()) as { content?: { type: string; text?: string }[] }
+      text = data.content?.find((c) => c.type === 'text')?.text ?? ''
+    } else {
+      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': gem as string },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: [{ role: 'user', parts: [{ text: q }] }], generationConfig: { maxOutputTokens: 300, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
+        signal: AbortSignal.timeout(7500),
+      })
+      if (!r.ok) return res.status(502).json({ error: 'upstream ' + r.status })
+      const data = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
+      text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
+    }
     const out = safeJson(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as Record<string, unknown> | null
     if (!out || typeof out.say !== 'string' || !out.say.trim()) return res.status(502).json({ error: 'bad answer' })
     res.status(200).json({
