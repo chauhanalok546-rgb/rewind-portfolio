@@ -44,16 +44,21 @@ export default async function handler(req: Req, res: Res) {
       const data = (await r.json()) as { content?: { type: string; text?: string }[] }
       text = data.content?.find((c) => c.type === 'text')?.text ?? ''
     } else {
-      const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': gem as string },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: [{ role: 'user', parts: [{ text: q }] }], generationConfig: { maxOutputTokens: 300, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
-        signal: AbortSignal.timeout(7500),
-      })
-      if (!r.ok) return res.status(502).json({ error: 'upstream ' + r.status, detail: (await r.text()).slice(0, 240) })
-      const data = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
+      const models = [process.env.GEMINI_MODEL, 'gemini-3.8-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest'].filter(Boolean) as string[]
+      const signal = AbortSignal.timeout(7500)
+      let data: { candidates?: { content?: { parts?: { text?: string }[] } }[] } | null = null, last = ''
+      for (const model of models) {            // a busy (503), out-of-quota (429) or retired (404) model hands over to the next one
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': gem as string },
+          body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: [{ role: 'user', parts: [{ text: q }] }], generationConfig: { maxOutputTokens: 300, responseMimeType: 'application/json' } }),
+          signal,
+        })
+        if (r.ok) { data = await r.json(); break }
+        last = `${model} ${r.status} ${(await r.text()).slice(0, 160)}`
+        if (![404, 429, 500, 503].includes(r.status)) break
+      }
+      if (!data) return res.status(502).json({ error: 'upstream', detail: last })
       text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
     }
     const out = safeJson(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)) as Record<string, unknown> | null
