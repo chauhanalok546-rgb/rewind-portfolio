@@ -55,7 +55,7 @@ export default async function handler(req: Req, res: Res) {
         body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: [{ role: 'user', parts: [{ text: q }] }], generationConfig: { maxOutputTokens: 300, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
         signal: AbortSignal.timeout(7500),
       })
-      if (!r.ok) return res.status(502).json({ error: 'upstream ' + r.status })
+      if (!r.ok) return res.status(502).json({ error: 'upstream ' + r.status, detail: (await r.text()).slice(0, 240) })
       const data = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
       text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
     }
