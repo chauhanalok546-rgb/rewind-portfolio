@@ -47,7 +47,7 @@ export default async function handler(req: Req, res: Res) {
       const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
       // AI Studio keys (AIza...) use the Generative Language API; Vertex "express mode" keys (AQ....) use the Vertex endpoint
       const url = (gem as string).startsWith('AQ.')
-        ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent`
+        ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${encodeURIComponent(gem as string)}`
         : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
       const r = await fetch(url, {
         method: 'POST',
