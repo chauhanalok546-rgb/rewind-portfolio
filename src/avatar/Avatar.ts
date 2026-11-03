@@ -89,6 +89,7 @@ export class Avatar {
 
   private nextBlink = 1.5
   private blinkT = -1
+  private blinkDur = 0.16
   private doubleBlink = false
   private clock = 0
   private weightShift = new Smooth(); private weightShiftTarget = 0; private weightT = 6
@@ -106,6 +107,7 @@ export class Avatar {
   private td = new Float32Array(1024)
   private fd = new Uint8Array(512)
   private analyserMode = false
+  private muted = false
   private level = 0
   private dip = 0
   /** Fired at key moments of a gesture (e.g. 'snap' when the fingers slip, for the sound and the white flash). */
@@ -117,8 +119,8 @@ export class Avatar {
   private _pw = new THREE.Quaternion(); private _bw = new THREE.Quaternion(); private _delta = new THREE.Quaternion()
   private bn: Record<string, THREE.Bone | undefined> = {}
 
-  async load(url: string) {
-    const gltf = await new GLTFLoader().loadAsync(url)
+  async load(url: string, onProgress?: (fraction: number) => void) {
+    const gltf = await new GLTFLoader().loadAsync(url, (e) => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total) })
     this.root.add(gltf.scene)
     gltf.scene.traverse((o) => {
       if ((o as THREE.Bone).isBone) this.bones.set(o.name, o as THREE.Bone)
@@ -167,9 +169,11 @@ export class Avatar {
     for (const n in EXPRESSIONS[e]) { const i = this.morphIndex.get(n); if (i !== undefined) this.exprTarget[i] = EXPRESSIONS[e][n] }
   }
   setLookTarget(x: number, y: number) { this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
-  blinkNow() { if (this.blinkT < 0) this.blinkT = 0 }
+  blinkNow(duration = 0.16) { if (this.blinkT < 0) { this.blinkT = 0; this.blinkDur = duration } }
 
   isSpeaking() { return !!(this.audio && !this.audio.paused && !this.audio.ended && (this.analyserMode || this.cues.length)) }
+
+  setMuted(m: boolean) { this.muted = m; if (this.audio) this.audio.muted = m }
 
   stop() { this.audio?.pause(); this.cues = []; this.analyserMode = false }
 
@@ -180,6 +184,7 @@ export class Avatar {
       this.cues = []
       const el = new Audio(audioUrl)
       el.crossOrigin = 'anonymous'
+      el.muted = this.muted
       this.audio = el
       this.analyserMode = true
       this.ensureAudioGraph(el)
@@ -267,10 +272,10 @@ export class Avatar {
       if (this.nextBlink <= 0) { this.blinkT = 0; this.doubleBlink = Math.random() < 0.15 }
     } else {
       this.blinkT += dt
-      const dur = 0.16, k = this.blinkT / dur
+      const dur = this.blinkDur, k = this.blinkT / dur
       const w = k < 0.38 ? k / 0.38 : Math.max(0, 1 - (k - 0.38) / 0.62)
       this.want('eyeBlinkLeft', w); this.want('eyeBlinkRight', w)
-      if (this.blinkT >= dur) { this.blinkT = -1; this.nextBlink = this.doubleBlink ? 0.14 : 2 + Math.random() * 4; this.doubleBlink = false }
+      if (this.blinkT >= dur) { this.blinkT = -1; this.blinkDur = 0.16; this.nextBlink = this.doubleBlink ? 0.14 : 2 + Math.random() * 4; this.doubleBlink = false }
     }
 
     // ---- mood (blended smoothly) + a touch of brow life

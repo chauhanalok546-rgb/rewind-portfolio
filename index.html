@@ -1,40 +1,100 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="cinematic">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rewind: avatar test</title>
+    <meta name="description" content="Rewind: The Alok Timeline. An interactive, voice-led portfolio: travel back through Alok Chauhan's life with his digital twin." />
+    <title>Rewind: The Alok Timeline</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <canvas id="stage"></canvas>
-    <div class="vignette"></div>
-    <div class="hud">
-      <div class="panel">
-        <b>Avatar test</b>
-        <span id="status">loading avatar…</span>
-        <div class="row">
-          <button id="speak" disabled>Speak test line</button>
-          <button id="frame" disabled>Head / full body</button>
-          <button id="blink" disabled>Blink</button>
-          <button id="theme">Lab theme</button>
-        </div>
-        <div class="row">
-          <button id="ex-neutral">Neutral</button>
-          <button id="ex-happy">Happy</button>
-          <button id="ex-serious">Serious</button>
-          <button id="ex-proud">Proud</button>
-        </div>
-        <div class="row">
-          <button id="greeting" disabled>Play greeting</button>
-          <button id="all" disabled>Play full story</button>
-          <button id="stop">Stop</button>
-        </div>
-        <div class="row" id="gestures"></div>
-        <small>Move the mouse: eyes and head follow. Idle breathing and random blinks are always on.</small>
+    <div class="bg" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="grid"></i><i class="scan"></i></div>
+    <canvas id="stage" aria-label="Alok's digital avatar standing on a time-machine platform" role="img"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <!-- BOOT -->
+    <section id="boot" class="screen" aria-live="polite">
+      <div class="bootbox">
+        <pre id="bootlog" class="mono"></pre>
+        <div class="progress" aria-hidden="true"><i id="bootbar"></i></div>
       </div>
-    </div>
-    <div id="sub" class="sub"></div>
+    </section>
+
+    <!-- ENTER -->
+    <section id="enter" class="screen hidden">
+      <div class="glass card enter-card" role="dialog" aria-labelledby="enter-title" aria-describedby="enter-desc">
+        <p class="eyebrow mono">alok.os v18 · time machine</p>
+        <h1 id="enter-title">Rewind: The Alok Timeline</h1>
+        <p id="enter-desc" class="lead">A short trip through my life, told by my digital twin. Turn your sound on: he talks.</p>
+        <button id="enter-btn" class="btn primary big">Enter the lab</button>
+        <p class="fine">This site plays audio after you click. Nothing is recorded or uploaded.</p>
+      </div>
+    </section>
+
+    <!-- LOBBY UI -->
+    <main id="app" class="hidden">
+      <aside class="glass panel coords" aria-label="Temporal coordinates">
+        <h2 class="mono">Temporal coordinates</h2>
+        <div class="year" id="year" aria-live="off">2026</div>
+        <dl class="mono">
+          <div><dt>Location</dt><dd id="loc">Pune, IN</dd></div>
+          <div><dt>Signal</dt><dd id="sig">100%</dd></div>
+          <div><dt>Status</dt><dd id="status" class="status">Standby</dd></div>
+        </dl>
+      </aside>
+
+      <aside class="glass panel log" aria-label="Mission log" aria-live="polite">
+        <h2 class="mono">Mission log</h2>
+        <ul id="logs" class="mono"></ul>
+      </aside>
+
+      <div class="stickers" id="stickers" role="group" aria-label="Fun facts"></div>
+      <div class="toasts" id="toasts" aria-live="polite"></div>
+      <button id="nopress" class="nopress mono" title="Do not press">Do not press</button>
+
+      <div id="sub" class="sub" role="status"></div>
+
+      <nav class="glass controlbar" aria-label="Controls">
+        <button id="c-prev" class="icon" disabled title="Previous scene (film arrives in the next phase)" aria-label="Previous scene">⏮</button>
+        <button id="c-play" class="icon" disabled title="Play / pause (film arrives in the next phase)" aria-label="Play or pause">⏯</button>
+        <button id="c-next" class="icon" disabled title="Next scene (film arrives in the next phase)" aria-label="Next scene">⏭</button>
+        <span class="chips" id="chips"></span>
+        <button id="c-time" class="btn primary small" aria-label="Open the time machine">⟲ Time machine</button>
+        <button id="c-mic" class="icon" disabled title="Ask Alok (arrives with the live brain)" aria-label="Ask Alok by voice">🎙</button>
+        <button id="c-cc" class="icon on" aria-pressed="true" title="Captions (C)" aria-label="Toggle captions">CC</button>
+        <button id="c-snd" class="icon on" aria-pressed="true" title="Sound (S)" aria-label="Toggle sound">🔊</button>
+        <button id="c-theme" class="icon" title="Switch bright lab / cinematic" aria-label="Switch theme">◐</button>
+      </nav>
+      <a class="classic" href="https://github.com/chauhanalok546-rgb/Portfolio" target="_blank" rel="noopener">Classic portfolio ↗</a>
+    </main>
+
+    <!-- PERMISSION POPUP -->
+    <section id="ask" class="screen dim hidden" aria-hidden="true">
+      <div class="glass card ask-card" role="dialog" aria-modal="true" aria-labelledby="ask-title" aria-describedby="ask-desc">
+        <h2 id="ask-title">Travel back in time?</h2>
+        <p id="ask-desc">Alok will take you through his life, his achievements, skills and projects. About 4 minutes.</p>
+        <div class="row">
+          <button id="ask-yes" class="btn primary">Yes, let's go</button>
+          <button id="ask-no" class="btn ghost">Not now</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARRIVED (placeholder until the film exists) -->
+    <section id="arrived" class="screen hidden" aria-hidden="true">
+      <div class="glass card arrived-card">
+        <p class="eyebrow mono">destination locked · 2015</p>
+        <h2>Scene 0 · Signal from 2030</h2>
+        <p>The time machine works. The film itself, six scenes of my life, is the next thing being built.</p>
+        <button id="arrived-back" class="btn ghost">Back to the lab</button>
+      </div>
+    </section>
+
+    <div id="flash" class="flash" aria-hidden="true"></div>
+    <noscript><p class="noscript">This experience needs JavaScript and WebGL. <a href="https://github.com/chauhanalok546-rgb/Portfolio">Open the classic portfolio</a>.</p></noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
