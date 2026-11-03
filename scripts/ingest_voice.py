@@ -10,6 +10,8 @@ SRC, OUT = os.path.join(ROOT, "voice-raw"), os.path.join(ROOT, "public/audio/nar
 script = json.load(open(os.path.join(OUT, "script.json")))
 arm = {l["id"] for l in script["lines"] if l["speaker"] == "ARM-01"}
 RADIO = "highpass=f=380,lowpass=f=3400,acompressor=threshold=-24dB:ratio=6,aecho=0.8:0.6:12:0.15,asetrate=44100*0.94,aresample=44100,"
+# Lines that were spoken too fast get slowed (pitch kept). A slower re-recording always sounds better than this.
+TEMPO = {"s5_2": 0.80, "s3_5": 0.88, "s6_2": 0.90}
 SR, WIN = 16000, 800            # 50 ms windows
 
 def pcm(path):
@@ -43,7 +45,7 @@ for f in sorted(glob.glob(os.path.join(SRC, "*.*"))):
     env = envelope(pcm(f))
     a, b, ref, thr = speech_span(env)
     start = max(0, a * 0.05 - 0.10); end = (b + 1) * 0.05 + 0.28
-    flt = ("afftdn=nr=10:nf=-40," + ("" if id_ not in arm else RADIO) +
+    flt = ("afftdn=nr=10:nf=-40," + (f"atempo={TEMPO[id_]}," if id_ in TEMPO else "") + ("" if id_ not in arm else RADIO) +
            "highpass=f=80,loudnorm=I=-16:TP=-1.5:LRA=11,adelay=70|70,apad=pad_dur=0.1")
     dst = os.path.join(OUT, id_ + ".mp3")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{start:.2f}", "-to", f"{end:.2f}", "-i", f, "-af", flt, "-ac", "1", "-ar", "44100", "-b:a", "96k", dst], check=True)
