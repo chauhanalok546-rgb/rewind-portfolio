@@ -189,7 +189,7 @@ function resize() {
   camera.aspect = w / h
   camera.fov = w / h < 0.7 ? 38 : 28
   // portrait phones: pull back and look higher so the avatar sits in the lower part of the screen (cards go above him)
-  if (w / h < 0.75) { camBase.set(0, 1.25, 5.3); lookBase.set(0, 1.62, 0) } else { camBase.set(0, 1.05, 4.4); lookBase.set(0, 0.95, 0) }
+  if (w / h < 1.0) { camBase.set(0, 1.25, 5.3); lookBase.set(0, 1.62, 0) } else { camBase.set(0, 1.05, 4.4); lookBase.set(0, 0.95, 0) }
   if (!closeUp) { camPos.copy(camBase); camLook.copy(lookBase) }
   camera.updateProjectionMatrix()
   moteMat.uniforms.uScale.value = (h * dpr) / 900
