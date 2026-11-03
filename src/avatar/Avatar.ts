@@ -19,7 +19,7 @@ interface ArmPose { arm: V3; fore: V3; hand?: V3; fingers?: number[] }   // fing
 interface GesturePose { L?: ArmPose; R?: ArmPose }
 interface GestureDef { dur: number; fadeIn: number; fadeOut: number; amp: number; pose: (t: number) => GesturePose }
 
-const REST_ARM: ArmPose = { arm: [0.12, -1, 0.02], fore: [0.10, -1, 0.22], fingers: [0.15, 0.2, 0.2, 0.2, 0.2] }
+const REST_ARM: ArmPose = { arm: [0.15, -1, 0.07], fore: [0.09, -0.93, 0.38], fingers: [0.18, 0.30, 0.36, 0.42, 0.46] }   // a natural, slightly bent, relaxed stance
 const osc = (t: number, hz: number) => Math.sin(t * Math.PI * 2 * hz)
 const GESTURES: Record<Gesture, GestureDef> = {
   wave: { dur: 2.8, fadeIn: 0.6, fadeOut: 0.7, amp: 1, pose: (t) => ({ R: { arm: [1, 0.30, 0.05], fore: [0.15 + osc(t, 2.2) * 0.5, 1, 0.08], fingers: [0, 0, 0, 0, 0] } }) },
@@ -137,6 +137,7 @@ export class Avatar {
       }
     })
     for (const [n, b] of this.bones) this.rest.set(n, b.quaternion.clone())
+    this.finishLook(gltf.scene)
     for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftEye', 'RightEye', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm']) this.bn[n] = this.bones.get(n)
     for (const [n, b] of this.bones) {
       const m = /^Hair(Front|BackL|BackR|Back|L|R)$/.exec(n)
@@ -154,6 +155,46 @@ export class Avatar {
     return this
   }
 
+  /** Realism touches that do not need new art: warm skin undertone, hair sheen, wet-looking eyes, a soft contact shadow. */
+  private finishLook(scene: THREE.Object3D) {
+    let body: THREE.Mesh | undefined
+    scene.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (!m.isMesh) return
+      const mat = m.material as THREE.MeshStandardMaterial
+      if (o.name === 'avaturn_body' && mat.map) {
+        body = m
+        mat.emissive = new THREE.Color('#ff7e5c'); mat.emissiveMap = mat.map; mat.emissiveIntensity = 0.12   // blood-warm undertone, so skin never goes grey in shadow
+        mat.envMapIntensity = 1.15
+      }
+      if (o.name === 'avaturn_hair_0') { mat.roughness = 0.5; mat.envMapIntensity = 1.4 }
+    })
+    // soft contact shadow under the feet
+    const c = document.createElement('canvas'); c.width = c.height = 128
+    const g = c.getContext('2d')!; const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64)
+    gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128)
+    const shadow = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }))
+    shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.006, 0.02); shadow.renderOrder = -1; this.root.add(shadow)
+    // glossy corneas: a black, specular-only cap over each painted eye (additive), carried by the eye bones so the glints move with the gaze
+    if (body) this.addCorneas(body)
+  }
+
+  private corneas: THREE.Mesh[] = []
+  private addCorneas(body: THREE.Mesh) {
+    this.root.updateMatrixWorld(true)
+    const ray = new THREE.Raycaster(); const mat = new THREE.MeshPhysicalMaterial({ color: 0x000000, roughness: 0.05, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.04, envMapIntensity: 0.55, specularIntensity: 0.6, opacity: 0.8, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })
+    for (const name of ['LeftEye', 'RightEye']) {
+      const eye = this.bones.get(name); if (!eye) continue
+      const p = eye.getWorldPosition(new THREE.Vector3())
+      ray.set(new THREE.Vector3(p.x, p.y, 1), new THREE.Vector3(0, 0, -1))
+      const hit = ray.intersectObject(body, false)[0]; if (!hit) continue
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.0108, 28, 18), mat)
+      cap.scale.set(1, 1, 0.3); cap.renderOrder = 5; cap.frustumCulled = false
+      cap.position.copy(eye.worldToLocal(new THREE.Vector3(p.x, p.y, hit.point.z + 0.0008)))
+      cap.userData.base = cap.scale.clone(); cap.userData.side = name; eye.add(cap); this.corneas.push(cap)
+    }
+  }
+
   get morphCount() { return this.morphNames.length }
 
   /** The export is in a T-pose: bring the arms down to a relaxed stance. */
@@ -163,9 +204,15 @@ export class Avatar {
       const arm = this.bones.get(`${side}Arm`), fore = this.bones.get(`${side}ForeArm`), hand = this.bones.get(`${side}Hand`)
       if (!arm || !fore) continue
       const out = side === 'Left' ? 1 : -1
-      this.aim(arm, fore, new THREE.Vector3(out * 0.12, -1, 0.02).normalize()); this.rest.set(arm.name, arm.quaternion.clone())
+      this.aim(arm, fore, new THREE.Vector3(out * REST_ARM.arm[0], REST_ARM.arm[1], REST_ARM.arm[2]).normalize()); this.rest.set(arm.name, arm.quaternion.clone())
       this.root.updateMatrixWorld(true)
-      if (hand) { this.aim(fore, hand, new THREE.Vector3(out * 0.10, -1, 0.22).normalize()); this.rest.set(fore.name, fore.quaternion.clone()) }
+      if (hand) { this.aim(fore, hand, new THREE.Vector3(out * REST_ARM.fore[0], REST_ARM.fore[1], REST_ARM.fore[2]).normalize()); this.rest.set(fore.name, fore.quaternion.clone()) }
+      this.root.updateMatrixWorld(true)
+      // relaxed, gently curled fingers at rest (progressively more towards the little finger)
+      for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) {
+        const b = this.bones.get(`${side}Hand${FINGERS[i]}${j + 1}`)
+        if (b) { b.rotateX(REST_ARM.fingers![i] * CURL_SEG[j] * (i === 0 ? 0.55 : 1)); this.rest.set(b.name, b.quaternion.clone()) }
+      }
       this.root.updateMatrixWorld(true)
     }
   }
@@ -337,6 +384,13 @@ export class Avatar {
       }
     }
 
+    // ---- corneas close with the lids
+    for (const c of this.corneas) {
+      const i = this.morphIndex.get(c.userData.side === 'LeftEye' ? 'eyeBlinkLeft' : 'eyeBlinkRight')
+      const b = i === undefined ? 0 : this.values[i]
+      c.scale.y = c.userData.base.y * Math.max(0.04, 1 - b * 1.15)
+    }
+
     // ---- apply with per-channel smoothing
     for (let i = 0; i < this.values.length; i++) {
       const name = this.morphNames[i]
@@ -437,7 +491,7 @@ export class Avatar {
     this.aim(fore, hand, this.mix(dir, REST_ARM.fore, p.fore, sgn, w)); fore.updateWorldMatrix(false, true)
     const base = REST_ARM.fingers!, tgt = p.fingers ?? base
     for (let i = 0; i < 5; i++) {
-      const curl = base[i] + (tgt[i] - base[i]) * w
+      const curl = (tgt[i] - base[i]) * w          // the resting curl is already part of the rest pose
       for (let j = 0; j < 3; j++) {
         const b = this.bones.get(side + 'Hand' + FINGERS[i] + (j + 1))
         if (b) { b.quaternion.copy(this.rest.get(b.name)!); b.rotateX(curl * CURL_SEG[j] * (i === 0 ? 0.55 : 1)) }

@@ -15,6 +15,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowEnd, alpha: tr
 let dprCap = lowEnd ? 1.25 : 1.5                       // lowered automatically when the frame rate dips
 renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap))
 renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.toneMappingExposure = 1.1
 renderer.shadowMap.enabled = true
 renderer.localClippingEnabled = true
 renderer.shadowMap.type = THREE.PCFShadowMap
@@ -23,13 +24,14 @@ const scene = new THREE.Scene()
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture
 
 const hemi = new THREE.HemisphereLight('#dfeaff', '#0e1726', 0.5); scene.add(hemi)
-const key = new THREE.SpotLight('#fff4e6', 20, 14, 0.5, 0.6, 1.6)
+const key = new THREE.SpotLight('#fff1e0', 20, 14, 0.5, 0.95, 1.6)
 key.position.set(1.8, 3.2, 3.4); key.target.position.set(0, 1.0, 0); key.castShadow = !lowEnd
 key.shadow.mapSize.set(lowEnd ? 512 : 1024, lowEnd ? 512 : 1024); key.shadow.bias = -0.0004; key.shadow.radius = 5
 scene.add(key, key.target)
 const rimC = new THREE.SpotLight('#00b4ff', 26, 12, 0.7, 0.8, 1.6); rimC.position.set(-2.6, 2.4, -2.4); rimC.target.position.set(0, 1.1, 0); scene.add(rimC, rimC.target)
 const rimA = new THREE.SpotLight('#ffb020', 18, 12, 0.7, 0.8, 1.6); rimA.position.set(2.6, 2.0, -2.6); rimA.target.position.set(0, 1.1, 0); scene.add(rimA, rimA.target)
-const fill = new THREE.DirectionalLight('#cfe3ff', 0.35); fill.position.set(-3, 1.5, 3); scene.add(fill)
+const fill = new THREE.DirectionalLight('#cfe3ff', 0.4); fill.position.set(-3, 1.5, 3); scene.add(fill)
+const bounce = new THREE.DirectionalLight('#ffb98a', 0.45); bounce.position.set(0.3, -1.2, 2.5); scene.add(bounce)      // warm light bouncing up from the floor: lifts the shadow under the chin and brows
 
 const platMat = new THREE.MeshStandardMaterial({ color: '#10192b', roughness: 0.22, metalness: 0.75 })
 const platform = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.06, 0.07, 96), platMat)
