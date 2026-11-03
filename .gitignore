@@ -4,3 +4,5 @@ dist
 .env.*
 .vercel
 .DS_Store
+voice-raw/*
+!voice-raw/.gitkeep
