@@ -44,7 +44,7 @@ export default async function handler(req: Req, res: Res) {
       const data = (await r.json()) as { content?: { type: string; text?: string }[] }
       text = data.content?.find((c) => c.type === 'text')?.text ?? ''
     } else {
-      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+      const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
       const r = await fetch(url, {
         method: 'POST',
