@@ -22,7 +22,9 @@ function setState(s: State) { state = s; document.documentElement.dataset.state 
 function typeInto(el: HTMLElement, text: string, speed = 24): Promise<void> {
   return new Promise((resolve) => {
     let i = 0
-    const step = () => { el.textContent += text[i++] ?? ''; if (i < text.length) setTimeout(step, reduced ? 0 : speed); else resolve() }
+    const step = () => {
+      if (reduced || document.hidden) { el.textContent += text.slice(i); resolve(); return }   // no typewriter in background tabs or reduced motion
+      el.textContent += text[i++] ?? ''; if (i < text.length) setTimeout(step, reduced || document.hidden ? 0 : speed); else resolve() }
     step()
   })
 }
