@@ -292,13 +292,15 @@ export class Avatar {
       const rms = Math.sqrt(sum / this.td.length)
       this.analyser.getByteFrequencyData(this.fd)
       let num = 0, den = 0
-      for (let i = 2; i < this.fd.length; i++) { num += i * this.fd[i]; den += this.fd[i] }
-      const centroid = den > 0 ? (num / den) * (this.ctx!.sampleRate / this.analyser.fftSize) : 0
+      const hzPerBin = this.ctx!.sampleRate / this.analyser.fftSize
+      const maxBin = Math.min(this.fd.length, Math.floor(7000 / hzPerBin))          // speech energy lives below ~7 kHz
+      for (let i = 2; i < maxBin; i++) { const w = Math.max(0, this.fd[i] - 70); num += i * w; den += w }   // ignore the noise floor
+      const centroid = den > 0 ? (num / den) * hzPerBin : 0
       const open = Math.min(1, Math.max(0, (rms - 0.02) / 0.3)) ** 0.85
       this.level = damp(this.level, open, open > this.level ? 28 : 14, dt)        // quick attack, softer release
       const o = this.level
-      if (centroid < 1800) { this.want('viseme_O', o * 0.6); this.want('viseme_U', o * 0.22) }
-      else if (centroid < 3200) { this.want('viseme_aa', o * 0.65); this.want('viseme_E', o * 0.2) }
+      if (centroid < 1500) { this.want('viseme_O', o * 0.6); this.want('viseme_U', o * 0.22) }
+      else if (centroid < 2700) { this.want('viseme_aa', o * 0.65); this.want('viseme_E', o * 0.2) }
       else { this.want('viseme_I', o * 0.35); this.want('viseme_SS', o * 0.3) }
       // lips press together on sudden dips between words
       this.dip = damp(this.dip, o < 0.06 ? 1 : 0, 10, dt)
