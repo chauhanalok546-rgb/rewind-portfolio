@@ -37,7 +37,8 @@ export function decay(key: 'flare' | 'chrono', ms: number) {
 }
 export function show(id: string) { const el = $(id); el.classList.remove('hidden'); el.setAttribute('aria-hidden', 'false'); requestAnimationFrame(() => el.classList.remove('fade-out')) }
 export function hide(id: string, ms = 450) {
-  const el = $(id); el.classList.add('fade-out'); el.setAttribute('aria-hidden', 'true')
+  const el = $(id); if (el.contains(document.activeElement)) (document.activeElement as HTMLElement).blur()   // never hide a focused element from assistive tech
+  el.classList.add('fade-out'); el.setAttribute('aria-hidden', 'true')
   setTimeout(() => { if (el.classList.contains('fade-out')) el.classList.add('hidden') }, ms)
 }
 /** One white flash: in 200 ms, hold 150 ms, out 700 ms (reduced motion: soft 600 ms fade at 85%). `atPeak` runs behind the light. */

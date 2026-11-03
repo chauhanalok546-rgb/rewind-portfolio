@@ -51,11 +51,17 @@ function disposeScene() {
   for (const e of els) { gsap.killTweensOf(e); gsap.to(e, { autoAlpha: 0, duration: 0.5, onComplete: () => e.remove() }) }
 }
 
-async function enterScene(i: number) {
+const warmed = new Set<string>()
+function prefetch(i: number) {
+  for (const id of SCENES[i]?.lines ?? []) { if (warmed.has(id)) continue; warmed.add(id); void fetch(`/audio/narration/${id}.mp3`).catch(() => warmed.delete(id)) }
+}
+
+function enterScene(i: number) {
   const def = SCENES[i]
   disposeScene()
   current = i; ended = false
   document.documentElement.dataset.scene = def.id
+  prefetch(i); prefetch(i + 1)
   const els: HTMLElement[] = []
   const tl = gsap.timeline()
   live = { els, tl }
@@ -74,8 +80,8 @@ async function enterScene(i: number) {
     banner,
   }
   // where the avatar stands
-  if (def.avatar === 'lobby') { stage.setLobbyVisible(true, i === 0 ? 0 : 900); stage.setAvatarPose(0, 0, i === 0 ? 0 : 0); if (i > 0) await stage.teleport('in', 1100) }
-  else { stage.setLobbyVisible(false, 600); stage.setAvatarPose(def.avatar.x * Math.min(1, innerWidth / innerHeight / 1.6), def.avatar.yaw, 0); await stage.teleport('in', 1100) }
+  if (def.avatar === 'lobby') { stage.setLobbyVisible(true, i === 0 ? 0 : 900); stage.setAvatarPose(0, 0, i === 0 ? 0 : 0); if (i > 0) void stage.teleport('in', 1100) }
+  else { stage.setLobbyVisible(false, 600); stage.setAvatarPose(innerWidth / innerHeight < 0.75 ? 0 : def.avatar.x * Math.min(1, innerWidth / innerHeight / 1.6), innerWidth / innerHeight < 0.75 ? 0 : def.avatar.yaw, 0); void stage.teleport('in', 1100) }
   void animateYear(def.year, reduced ? 0 : 600)
   setPlace(def.place); setSignal(i === 0 ? '12%' : i === 5 ? '88%' : '100%')
   setStatus('Playing')
@@ -103,7 +109,7 @@ function build() {
   let t = 0
   SCENES.forEach((def, i) => {
     tl.addLabel(def.id, t)
-    tl.call(() => { void enterScene(i) }, [], t + 0.001)
+    tl.call(() => { enterScene(i) }, [], t + 0.001)
     def.lines.forEach((id, k) => tl.call(() => { void narrator.playLine(id) }, [], t + lineOffset(def, k)))
     const len = sceneLen(def)
     if (i < SCENES.length - 1) {

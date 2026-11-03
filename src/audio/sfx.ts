@@ -5,7 +5,7 @@ let hum: { stop: () => void } | null = null
 let muted = false
 
 function ensure() {
-  if (!ctx) { ctx = new AudioContext(); master = ctx.createGain(); master.gain.value = muted ? 0 : 1; master.connect(ctx.destination) }
+  if (!ctx) { const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext; ctx = new AC(); master = ctx.createGain(); master.gain.value = muted ? 0 : 1; master.connect(ctx.destination) }
   return ctx
 }
 const noise = (c: AudioContext, seconds: number) => {

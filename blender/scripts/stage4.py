@@ -149,5 +149,5 @@ for side,sgn in (('Left',-1),('Right',1)):
         torus('SilverRing',pr,ai,0.0105,0.0016,SILVER,'RightHandIndex1')
 for o in bpy.data.objects: o.select_set(False)
 bpy.ops.wm.save_as_mainfile(filepath=S+"stage4.blend")
-bpy.ops.export_scene.gltf(filepath=S+"alok_avatar_v2.glb",export_format='GLB',export_morph=True,export_skins=True,export_yup=True,export_apply=False,use_selection=False)
+bpy.ops.export_scene.gltf(filepath=S+"alok_avatar_v2.glb",export_format='GLB',export_image_format='WEBP',export_image_quality=82,export_morph=True,export_skins=True,export_yup=True,export_apply=False,use_selection=False)
 print("done")

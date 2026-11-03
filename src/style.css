@@ -114,7 +114,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page);
 .nopress:hover { opacity: 1; }
 
 /* ---------- captions, controls ---------- */
-.sub { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); max-width: min(760px, calc(100vw - 32px)); padding: 10px 22px; border-radius: 22px; font-weight: 600; font-size: clamp(18px, 2.2vw, 26px); line-height: 1.35; text-align: center; background: rgba(245, 248, 252, 0.82); color: var(--graphite); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+.sub { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); width: max-content; max-width: min(760px, calc(100vw - 32px)); padding: 10px 22px; border-radius: 22px; font-weight: 600; font-size: clamp(18px, 2.2vw, 26px); line-height: 1.35; text-align: center; background: rgba(245, 248, 252, 0.82); color: var(--graphite); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); opacity: 0; transition: opacity 0.25s; pointer-events: none; }
 .sub.on { opacity: 1; } .sub.off { display: none; }
 .controlbar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 8px 12px; max-width: calc(100vw - 24px); flex-wrap: wrap; justify-content: center; }
 .icon { font: 700 13px var(--font-body); min-width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--glass-border); background: transparent; color: var(--text); cursor: pointer; }
@@ -139,8 +139,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page);
   .sticker { width: 48px; height: 48px; }
   .chips, #c-prev, #c-play, #c-next, #c-mic { display: none; }
   .controlbar { bottom: 12px; padding: 8px 10px; }
-  .nopress { bottom: 66px; }
-  .sub { bottom: 92px; }
+  .nopress { top: 14px; right: 14px; bottom: auto; left: auto; }
+  .classic { top: 44px; right: 14px; bottom: auto; }
+  .sub { bottom: 84px; font-size: 16px; padding: 8px 14px; border-radius: 16px; }
 }
 
 /* ---------- reduced motion ---------- */
@@ -245,8 +246,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page);
 .hint2 { margin: 0; font-size: 11px; opacity: 0.6; }
 .chip.on { opacity: 1; background: rgba(0, 180, 255, 0.25); border-color: var(--ion-cyan); } .chip { cursor: pointer; } .chip:not(.on):hover { opacity: 0.9; }
 @media (max-width: 820px) {
-  .right { right: 4vw; left: 4vw; width: auto; top: 11vh; }
-  .term-signal { right: 4vw; left: 4vw; width: auto; top: calc(11vh + 120px); }
+  .right { right: 4vw; left: 4vw; width: auto; top: 62px; }
+  .term-signal { right: 4vw; left: 4vw; width: auto; top: 190px; }
+  .film .coords { width: auto; padding: 6px 12px; } .film .coords h2, .film .coords dl { display: none; } .film .coords .year { font-size: 26px; margin: 0; }
+  .card2 { padding: 12px 14px; gap: 6px; } .card2 h3 { font-size: 20px; } .card2 .big { font-size: 48px; }
+  .banner2 { top: auto; bottom: 150px; }
+  .traits { margin-top: 0; top: 14px; left: auto; right: 14px; transform: none; max-width: 52vw; flex-wrap: wrap; justify-content: flex-end; }
+  .film .nopress { display: none; }
   .map { width: 92vw; right: 4vw; top: 10vh; } .signal, .contact { bottom: 120px; left: 4vw; right: 4vw; width: auto; }
   .trait { font-size: 10px; padding: 3px 8px; } .traits { margin-top: 56px; }
 }

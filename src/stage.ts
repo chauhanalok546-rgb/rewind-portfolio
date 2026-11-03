@@ -8,8 +8,11 @@ export type Theme = 'cinematic' | 'lab'
 
 /** The 3D stage: lights, time-machine platform, gyroscope rings, motes, camera. The app drives it through `stage`. */
 const canvas = document.getElementById('stage') as HTMLCanvasElement
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
-let dprCap = 1.5                       // lowered automatically when the frame rate dips
+/** weaker devices (touch phones, small screens, few CPU cores) get a lighter scene */
+const lowEnd = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 560 || (navigator.hardwareConcurrency ?? 8) <= 4
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowEnd, alpha: true, powerPreference: 'high-performance' })
+let dprCap = lowEnd ? 1.25 : 1.5                       // lowered automatically when the frame rate dips
 renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap))
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.shadowMap.enabled = true
@@ -21,8 +24,8 @@ scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnviron
 
 const hemi = new THREE.HemisphereLight('#dfeaff', '#0e1726', 0.5); scene.add(hemi)
 const key = new THREE.SpotLight('#fff4e6', 20, 14, 0.5, 0.6, 1.6)
-key.position.set(1.8, 3.2, 3.4); key.target.position.set(0, 1.0, 0); key.castShadow = true
-key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0004; key.shadow.radius = 5
+key.position.set(1.8, 3.2, 3.4); key.target.position.set(0, 1.0, 0); key.castShadow = !lowEnd
+key.shadow.mapSize.set(lowEnd ? 512 : 1024, lowEnd ? 512 : 1024); key.shadow.bias = -0.0004; key.shadow.radius = 5
 scene.add(key, key.target)
 const rimC = new THREE.SpotLight('#00b4ff', 26, 12, 0.7, 0.8, 1.6); rimC.position.set(-2.6, 2.4, -2.4); rimC.target.position.set(0, 1.1, 0); scene.add(rimC, rimC.target)
 const rimA = new THREE.SpotLight('#ffb020', 18, 12, 0.7, 0.8, 1.6); rimA.position.set(2.6, 2.0, -2.6); rimA.target.position.set(0, 1.1, 0); scene.add(rimA, rimA.target)
@@ -57,7 +60,7 @@ function radialTexture(inner: string, outer: string) {
 const pool = new THREE.Mesh(new THREE.PlaneGeometry(7, 7), new THREE.MeshBasicMaterial({ map: radialTexture('rgba(0,180,255,0.35)', 'rgba(0,180,255,0)'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }))
 pool.rotation.x = -Math.PI / 2; pool.position.y = -0.075; scene.add(pool)
 
-const MOTES = 220
+const MOTES = lowEnd ? 80 : 220
 const mp = new Float32Array(MOTES * 3), mseed = new Float32Array(MOTES * 2)
 for (let i = 0; i < MOTES; i++) {
   const a = Math.random() * Math.PI * 2, r = 0.8 + Math.random() * 2.6
@@ -95,7 +98,7 @@ export function setTheme(t: Theme) {
   hemi.intensity = dark ? 0.25 : 0.8
   rimC.intensity = dark ? 26 : 10; rimA.intensity = dark ? 18 : 7; key.intensity = dark ? 20 : 16
   platMat.color.set(dark ? '#10192b' : '#e9eef6'); platMat.metalness = dark ? 0.75 : 0.25
-  pool.visible = dark; motes.visible = dark
+  pool.visible = dark; motes.visible = dark && !reducedMotion
   glowOpacity = dark ? 1 : 0.45
   document.documentElement.dataset.theme = t
 }
@@ -184,6 +187,9 @@ function resize() {
   renderer.setPixelRatio(dpr); renderer.setSize(w, h, false)
   camera.aspect = w / h
   camera.fov = w / h < 0.7 ? 38 : 28
+  // portrait phones: pull back and look higher so the avatar sits in the lower part of the screen (cards go above him)
+  if (w / h < 0.75) { camBase.set(0, 1.25, 5.3); lookBase.set(0, 1.62, 0) } else { camBase.set(0, 1.05, 4.4); lookBase.set(0, 0.95, 0) }
+  if (!closeUp) { camPos.copy(camBase); camLook.copy(lookBase) }
   camera.updateProjectionMatrix()
   moteMat.uniforms.uScale.value = (h * dpr) / 900
 }
@@ -193,16 +199,17 @@ addEventListener('pointermove', (e) => {
   avatar.setLookTarget(nx, ny); pointer.set(nx, ny)
 })
 
-const clock = new THREE.Clock()
+let prevT = performance.now()
+let elapsed = 0
 let frames = 0, fpsT = 0
 export const perf = { fps: 60, dpr: 1 }
 let running = true
 function tick() {
-  const dt = Math.min(clock.getDelta(), 0.05)
-  const t = clock.elapsedTime
+  const now = performance.now(); const dt = Math.min((now - prevT) / 1000, 0.05); prevT = now; elapsed += dt
+  const t = elapsed
   avatar.update(dt)
   stepParticles(dt)
-  for (const r of rings) { r.rotation.z += dt * r.userData.speed * fx.ringSpeed * (r.userData.axis % 2 ? -1 : 1); r.position.y = r.userData.baseY + Math.sin(t * 0.5 + r.userData.axis) * 0.03 }
+  for (const r of rings) { r.rotation.z += dt * r.userData.speed * fx.ringSpeed * (reducedMotion ? 0.35 : 1) * (r.userData.axis % 2 ? -1 : 1); r.position.y = r.userData.baseY + Math.sin(t * 0.5 + r.userData.axis) * 0.03 }
   moteMat.uniforms.uTime.value = t; moteMat.uniforms.uSpeed.value = fx.motes
   for (const h of halos) (h.material as THREE.MeshBasicMaterial).opacity = Math.min(1, h.userData.base * (glowOpacity + fx.flare * 2.5) * (0.85 + 0.15 * Math.sin(t * 1.3)))
   for (const m of chronoMats) m.emissiveIntensity = 1 + fx.chrono * 6
@@ -210,7 +217,8 @@ function tick() {
   const k = 1 - Math.exp(-3.2 * dt)
   camNow.lerp(camPos, k); lookNow.lerp(camLook, k)
   const par = closeUp ? 0.05 : 0.22
-  camera.position.set(camNow.x + pointerNow.x * par + Math.sin(t * 0.17) * 0.05, camNow.y + pointerNow.y * par * 0.4 + Math.sin(t * 0.23) * 0.025, camNow.z + Math.sin(t * 0.13) * 0.06)
+  const drift = reducedMotion ? 0 : 1
+  camera.position.set(camNow.x + pointerNow.x * par * drift + Math.sin(t * 0.17) * 0.05 * drift, camNow.y + pointerNow.y * par * 0.4 * drift + Math.sin(t * 0.23) * 0.025 * drift, camNow.z + Math.sin(t * 0.13) * 0.06 * drift)
   camera.lookAt(lookNow)
   renderer.render(scene, camera)
   frames++; fpsT += dt

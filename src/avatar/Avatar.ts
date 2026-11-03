@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { audioGraph } from '../audio/sfx'
 
 export type Expression = 'neutral' | 'happy' | 'serious' | 'proud'
 
@@ -195,7 +196,7 @@ export class Avatar {
   }
 
   private ensureAudioGraph(el: HTMLAudioElement) {
-    this.ctx ??= new AudioContext()
+    this.ctx ??= audioGraph().ctx            // the same context that was unlocked by the Enter click (Safari needs that)
     if (this.ctx.state === 'suspended') void this.ctx.resume()
     if (!this.analyser) { this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 1024; this.analyser.smoothingTimeConstant = 0.35 }
     const src = this.ctx.createMediaElementSource(el)
