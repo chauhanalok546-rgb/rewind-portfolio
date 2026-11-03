@@ -1,3 +1,4 @@
+import * as THREE from 'three'
 import { fx, loadStage, stage, type Theme } from '../stage'
 import { film } from '../film/film'
 import { $, decay, hide, log, reduced, setStatus, show, wait, whiteFlash } from './hud'
@@ -234,10 +235,23 @@ function wireControls() {
   // chips: one per scene, locked until the film exists
   const chips = $('chips')
   for (const y of ['2015', '2023', '2024', '2026', '2030']) { const c = document.createElement('button'); c.className = 'chip'; c.textContent = y; c.disabled = true; c.title = 'The film arrives in the next phase'; chips.appendChild(c) }
+  // pointer depth + click the avatar or the arm and they react
+  addEventListener('pointermove', (e) => { const r = document.documentElement.style; r.setProperty('--px', String((e.clientX / innerWidth) * 2 - 1)); r.setProperty('--py', String((e.clientY / innerHeight) * 2 - 1)) })
+  let lastPoke = 0
+  $('stage').addEventListener('click', (e) => {
+    const now = performance.now(); if (now - lastPoke < 2500 || narrator.playing) return
+    const nx = (e.clientX / innerWidth) * 2 - 1, ny = (e.clientY / innerHeight) * 2 - 1
+    if (Math.abs(nx) < 0.22 && ny > -0.6 && ny < 0.75) {
+      lastPoke = now; sfx.chime(); avatar.setExpression('happy'); avatar.play((['wave', 'thumbs_up', 'present'] as const)[Math.floor(Math.random() * 3)])
+      toast(['Hey! 👋', 'You found me.', 'Careful, I tickle.'][Math.floor(Math.random() * 3)]); setTimeout(() => avatar.setExpression('neutral'), 2400)
+    } else if (nx > 0.45 && ny > 0) {
+      lastPoke = now; stage.robot.reach(new THREE.Vector3(0.45, 1.0, 0.25), 1.4); sfx.beep(); toast('ARM-01: beep.')
+    }
+  })
   // easter egg
   $('nopress').addEventListener('click', () => {
     document.body.classList.add('glitch'); sfx.beep(); setTimeout(() => document.body.classList.remove('glitch'), 520)
-    caption('I said do not press.', 'ARM-01'); setTimeout(() => caption(null), 2600)
+    stage.robot.press(new THREE.Vector3(0.7, 0.5, 0.9)); caption('I said do not press.', 'ARM-01'); setTimeout(() => caption(null), 2600)
   })
   void captionsOn
 }

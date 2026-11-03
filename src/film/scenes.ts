@@ -1,6 +1,8 @@
 import { gsap, h, mountains } from './dom'
 import type { Mood } from '../audio/music'
 import { reduced, setSignal } from '../app/hud'
+import { Vector3 } from 'three'
+import { stage } from '../stage'
 
 export interface SceneCtx {
   id: string
@@ -295,13 +297,13 @@ const scene6: SceneDef = {
     c.banner('Return to present', '2026')
     // ARM-01 builds the sentence from scattered words
     const words = ["Let's", 'build', 'something.']
-    const arm = c.add<HTMLElement>(`<div class="prop sentence right"><div class="scatter"></div><div class="built mono"></div><svg class="armsvg" viewBox="0 0 120 160"><rect x="40" y="130" width="40" height="22" rx="6" fill="#ffb020"/><path d="M60 130 L60 80 L96 40" fill="none" stroke="#ffb020" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="60" cy="130" r="9" fill="#0e1726"/><circle cx="60" cy="80" r="8" fill="#0e1726"/><path d="M96 40 l12 -8 M96 40 l12 10" stroke="#ffb020" stroke-width="6" stroke-linecap="round"/></svg></div>`)
+    const arm = c.add<HTMLElement>(`<div class="prop sentence right"><div class="scatter"></div><div class="built mono"></div></div>`)
     const scatter = arm.querySelector('.scatter') as HTMLElement, built = arm.querySelector('.built') as HTMLElement
     const els = words.map((w, i) => h(`<span class="w mono" style="--i:${i}">${w}</span>`, scatter))
     c.tl.fromTo(arm, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8 }, c.at(1, 0.2))
     els.forEach((e, i) => {
       c.tl.to(e, { autoAlpha: 0, duration: 0.25 }, c.at(1, 3.5 + i * 1.8))
-      c.tl.call(() => { built.textContent += (i ? ' ' : '') + words[i] }, [], c.at(1, 3.6 + i * 1.8))
+      c.tl.call(() => { stage.robot.reach(new Vector3(0.6 + i * 0.12, 0.42 + i * 0.1, 0.45), 1.2); built.textContent += (i ? ' ' : '') + words[i] }, [], c.at(1, 3.6 + i * 1.8))
     })
     // contact cards
     const contact = c.add<HTMLElement>(`<div class="prop contact right"><a class="glass cc" href="https://github.com/chauhanalok546-rgb" target="_blank" rel="noopener"><b>GitHub</b><span class="mono">chauhanalok546-rgb</span></a><a class="glass cc" href="https://linkedin.com/in/alok-chauhan-72a9603a1" target="_blank" rel="noopener"><b>LinkedIn</b><span class="mono">alok-chauhan-72a9603a1</span></a><button class="btn primary" id="replay">↺ Replay the story</button><p class="mono hint2">${document.documentElement.dataset.voice === 'on' ? 'Say "replay" or "contact", or press R.' : 'Press R to replay.'}</p></div>`)

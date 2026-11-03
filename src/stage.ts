@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { Avatar } from './avatar/Avatar'
 import { Narrator } from './voice/Narrator'
+import { createRobot } from './robot'
 
 export type Theme = 'cinematic' | 'lab'
 
@@ -73,12 +74,12 @@ const moteGeo = new THREE.BufferGeometry()
 moteGeo.setAttribute('position', new THREE.BufferAttribute(mp, 3)); moteGeo.setAttribute('seed', new THREE.BufferAttribute(mseed, 2))
 const moteMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
-  uniforms: { uTime: { value: 0 }, uScale: { value: 1 }, uSpeed: { value: 1 } },
-  vertexShader: `uniform float uTime; uniform float uScale; uniform float uSpeed; attribute vec2 seed; varying float vA; varying float vC;
+  uniforms: { uTime: { value: 0 }, uScale: { value: 1 }, uSpeed: { value: 1 }, uA: { value: new THREE.Color('#00b4ff') }, uB: { value: new THREE.Color('#ffb020') }, uSize: { value: 1 } },
+  vertexShader: `uniform float uTime; uniform float uScale; uniform float uSpeed; uniform float uSize; attribute vec2 seed; varying float vA; varying float vC;
     void main(){ vec3 p=position; p.y=mod(p.y+uTime*uSpeed*(0.05+seed.x*0.12),3.2); p.x+=sin(uTime*0.3+seed.y*6.28)*0.12; p.z+=cos(uTime*0.27+seed.x*6.28)*0.12;
-      vec4 mv=modelViewMatrix*vec4(p,1.0); gl_Position=projectionMatrix*mv; gl_PointSize=(1.5+seed.y*3.0)*uScale*(3.0/-mv.z);
+      vec4 mv=modelViewMatrix*vec4(p,1.0); gl_Position=projectionMatrix*mv; gl_PointSize=(1.5+seed.y*3.0)*uSize*uScale*(3.0/-mv.z);
       vA=smoothstep(0.0,0.4,p.y)*(1.0-smoothstep(2.4,3.2,p.y))*(0.35+0.65*seed.x); vC=seed.y; }`,
-  fragmentShader: `varying float vA; varying float vC; void main(){ vec2 d=gl_PointCoord-0.5; float a=smoothstep(0.5,0.0,length(d)); vec3 col=mix(vec3(0.0,0.71,1.0),vec3(1.0,0.69,0.13),step(0.8,vC)); gl_FragColor=vec4(col,a*vA); }`,
+  fragmentShader: `uniform vec3 uA; uniform vec3 uB; varying float vA; varying float vC; void main(){ vec2 d=gl_PointCoord-0.5; float a=smoothstep(0.5,0.0,length(d)); vec3 col=mix(uA,uB,step(0.8,vC))*2.0; gl_FragColor=vec4(col,a*vA); }`,
 })
 const motes = new THREE.Points(moteGeo, moteMat); motes.frustumCulled = false; scene.add(motes)
 
@@ -87,6 +88,11 @@ const avatar = new Avatar()
 avatar.hairPhysics = !lowEnd
 scene.add(avatar.root)
 const narrator = new Narrator(avatar)
+
+// ARM-01, the robotic arm: stands beside the avatar in the lobby and on the end card
+const robot = createRobot()
+robot.root.position.set(1.1, 0.42, 0.2); robot.root.rotation.y = -0.35; robot.root.scale.setScalar(0.9)
+scene.add(robot.root)
 
 /** Knobs the app turns: ring speed, glow flare (snap), chronometer glow, mote speed. */
 export const fx = { ringSpeed: 1, flare: 0, chrono: 0, motes: 1 }
@@ -109,12 +115,28 @@ export const getTheme = () => theme
 setTheme('cinematic')
 
 // ---- lobby objects can be hidden while the film plays
-const lobbyObjects: THREE.Object3D[] = [platform, edge, pool, motes, ...rings]
+const lobbyObjects: THREE.Object3D[] = [platform, edge, pool, ...rings, robot.root]
 export function setLobbyVisible(v: boolean, ms = 0) {
   const apply = (o: THREE.Object3D, on: boolean) => { o.visible = on }
   if (ms <= 0) { lobbyObjects.forEach((o) => apply(o, v)); return }
   if (v) lobbyObjects.forEach((o) => { o.visible = true; o.scale.setScalar(0.001); gsap.to(o.scale, { x: 1, y: 1, z: 1, duration: ms / 1000, ease: 'power3.out' }) })
   else lobbyObjects.forEach((o) => { gsap.to(o.scale, { x: 0.001, y: 0.001, z: 0.001, duration: ms / 1000, ease: 'power3.in', onComplete: () => { o.visible = false; o.scale.setScalar(1) } }) })
+}
+/** 3D atmosphere per era: colour, drift speed (negative falls), size of the particles */
+const AMBIENCE: Record<string, { a: string; b: string; speed: number; size: number }> = {
+  lobby: { a: '#00b4ff', b: '#ffb020', speed: 1, size: 1 },
+  scene1: { a: '#ffe2a8', b: '#fff6dc', speed: 0.6, size: 1.2 },       // warm morning dust over Uttarkashi
+  scene2: { a: '#fff0c8', b: '#9fc2ff', speed: 0.5, size: 1.0 },       // dust in the hall's spotlight
+  scene3: { a: '#ffb020', b: '#ff7a3c', speed: 1.8, size: 1.1 },       // embers of the dusk city
+  scene4: { a: '#00b4ff', b: '#baf0ff', speed: -3.5, size: 0.9 },      // code falling at NST
+  scene5: { a: '#ffffff', b: '#9fdcff', speed: 0.25, size: 1.4 },      // slow stars of 2030
+}
+export function setAmbience(kind: string) {
+  const a = AMBIENCE[kind] ?? AMBIENCE.lobby
+  motes.visible = theme === 'cinematic' && !reducedMotion
+  gsap.to(moteMat.uniforms.uA.value, { r: new THREE.Color(a.a).r, g: new THREE.Color(a.a).g, b: new THREE.Color(a.a).b, duration: 1.2 })
+  gsap.to(moteMat.uniforms.uB.value, { r: new THREE.Color(a.b).r, g: new THREE.Color(a.b).g, b: new THREE.Color(a.b).b, duration: 1.2 })
+  gsap.to(fx, { motes: a.speed, duration: 1.2 }); gsap.to(moteMat.uniforms.uSize, { value: a.size, duration: 1.2 })
 }
 export function setAvatarPose(x: number, yaw: number, ms: number) {
   if (ms <= 0) { avatar.root.position.x = x; avatar.root.rotation.y = yaw; return }
@@ -211,6 +233,7 @@ function tick() {
   const now = performance.now(); const dt = Math.min((now - prevT) / 1000, 0.05); prevT = now; elapsed += dt
   const t = elapsed
   avatar.update(dt)
+  robot.update(dt, t)
   stepParticles(dt)
   for (const r of rings) { r.rotation.z += dt * r.userData.speed * fx.ringSpeed * (reducedMotion ? 0.35 : 1) * (r.userData.axis % 2 ? -1 : 1); r.position.y = r.userData.baseY + Math.sin(t * 0.5 + r.userData.axis) * 0.03 }
   moteMat.uniforms.uTime.value = t; moteMat.uniforms.uSpeed.value = fx.motes
@@ -242,7 +265,7 @@ export async function loadStage(onProgress: (f: number) => void) {
 }
 tick()
 
-export const stage = { avatar, narrator, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAvatarPose, teleport, setAvatarVisible }
+export const stage = { avatar, narrator, robot, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
 ;(window as unknown as Record<string, unknown>).__stage = stage
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
 ;(window as unknown as Record<string, unknown>).__narrator = narrator

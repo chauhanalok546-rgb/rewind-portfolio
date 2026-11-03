@@ -9,10 +9,10 @@ os.environ["PATH"] = "/opt/homebrew/bin:" + os.environ["PATH"]
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "public/audio/narration")
 script = json.load(open(os.path.join(OUT, "script.json")))
-ALOK = dict(voice="en-IN-PrabhatNeural", rate="+28%", pitch="+0Hz")
+ALOK = dict(voice=os.environ.get("ALOK_VOICE", "en-IN-PrabhatNeural"), rate=os.environ.get("ALOK_RATE", "+14%"), pitch="+0Hz")
 ARM = dict(voice="en-GB-RyanNeural", rate="+10%", pitch="-6Hz")
 RADIO = "highpass=f=380,lowpass=f=3400,acompressor=threshold=-24dB:ratio=6,aecho=0.8:0.6:12:0.15,"
-CLEAN = "highpass=f=70,silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.05,areverse,silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.12,areverse,loudnorm=I=-16:TP=-1.5:LRA=11,adelay=70|70,apad=pad_dur=0.1"
+CLEAN = "highpass=f=70,silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.05,areverse,silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.12,areverse,loudnorm=I=-16:TP=-1.5:LRA=11,equalizer=f=3000:t=q:w=1.2:g=1.5,adelay=70|70,apad=pad_dur=0.1"
 
 async def one(line, sem):
     cfg = ALOK if line["speaker"] == "ALOK" else ARM

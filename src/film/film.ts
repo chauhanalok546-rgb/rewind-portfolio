@@ -86,6 +86,7 @@ function enterScene(i: number) {
   setPlace(def.place); setSignal(i === 0 ? '12%' : i === 5 ? '88%' : '100%')
   setStatus('Playing')
   music.play(def.music)
+  stage.setAmbience(def.id === 'scene0' || def.id === 'scene6' ? 'lobby' : def.id)
   tunnel.stop(900)
   def.enter(ctx)
   listeners.scene?.(i)
