@@ -426,13 +426,55 @@
    "keys": [
     "do you have a dog",
     "do you have a pet",
+    "is ringo real",
+    "is ringo your real dog",
     "tell me about ringo",
     "tell me about your dog",
     "what is your dog s name",
     "what is your pet s name",
     "who is ringo"
    ],
-   "say": "Yes, I have a pet dog, and his name is Ringo. The little robot dog beside me carries his name, and he travels through time with me.",
+   "say": "Yes, Ringo is my real dog. He's a two-year-old black mountain dog. The little robot dog beside me carries his name, and he travels through time with me.",
+   "gesture": "talk1",
+   "mood": "happy",
+   "jumpTo": null
+  },
+  {
+   "id": "qa_ringoage",
+   "q": "How old is Ringo?",
+   "keys": [
+    "how old is ringo",
+    "how old is your dog",
+    "what is ringo s age"
+   ],
+   "say": "Ringo is two years old.",
+   "gesture": "talk1",
+   "mood": "happy",
+   "jumpTo": null
+  },
+  {
+   "id": "qa_ringobreed",
+   "q": "What breed is Ringo?",
+   "keys": [
+    "is ringo a mountain dog",
+    "what breed is ringo",
+    "what breed is your dog",
+    "what kind of dog is ringo"
+   ],
+   "say": "Ringo is a mountain dog, the kind that feels at home in the hills of Uttarakhand.",
+   "gesture": "talk1",
+   "mood": "happy",
+   "jumpTo": null
+  },
+  {
+   "id": "qa_ringocolour",
+   "q": "What colour is Ringo?",
+   "keys": [
+    "what colour is ringo",
+    "what colour is your dog",
+    "what does ringo look like"
+   ],
+   "say": "Ringo is black. The robot dog next to me is a bit more colourful.",
    "gesture": "talk1",
    "mood": "happy",
    "jumpTo": null
@@ -669,7 +711,7 @@
     "what was your health issue",
     "why were you medically unfit"
    ],
-   "say": "I'd rather keep the details private. All I'll say is that it was a health issue at the medical stage. I'm doing well, and I'm focused on building.",
+   "say": "Sorry, I can't access that information right now. You can talk to the real Alok, or find him on GitHub or LinkedIn and ask him yourself.",
    "gesture": "talk1",
    "mood": "serious",
    "jumpTo": "scene3"
@@ -1085,7 +1127,7 @@
     "do you have a crush",
     "do you have a girlfriend"
    ],
-   "say": "That's a bit too personal for an interview. I'm focused on learning, building, and my dog Ringo keeps me company.",
+   "say": "Sorry, I can't access that information right now. You can talk to the real Alok, or find him on GitHub or LinkedIn and ask him yourself.",
    "gesture": "talk1",
    "mood": "happy",
    "jumpTo": null
@@ -1099,7 +1141,7 @@
     "what is your phone number",
     "where exactly do you live"
    ],
-   "say": "I keep my address and phone number private. You can reach me through GitHub or LinkedIn, and I'll show you the details at the end.",
+   "say": "Sorry, I can't access that information right now. You can talk to the real Alok, or find him on GitHub or LinkedIn and ask him yourself.",
    "gesture": "talk1",
    "mood": "neutral",
    "jumpTo": "scene6"
@@ -1111,9 +1153,11 @@
     "can you speak hindi",
     "can you talk in hindi",
     "do you speak english",
+    "what is your mother tongue",
+    "what languages do you know",
     "which languages do you speak"
    ],
-   "say": "I'm speaking English right now, and I'm happiest answering in English here. I come from Uttarakhand, so Hindi is close to home as well.",
+   "say": "I speak Hindi, English and Garhwali. Here I'm answering in English.",
    "gesture": "talk1",
    "mood": "happy",
    "jumpTo": null
@@ -1225,6 +1269,36 @@
    "say": "The story takes about five minutes. You can pause or skip any time, jump to a year, or say Hey Alok, listen, and ask me anything about me, my work, or even a general question.",
    "gesture": "talk1",
    "mood": "happy",
+   "jumpTo": null
+  },
+  {
+   "id": "qa_personal",
+   "q": "When is your birthday?",
+   "keys": [
+    "do you drink",
+    "do you smoke",
+    "how much money do you have",
+    "how old is your brother",
+    "what do your parents do",
+    "what is your blood group",
+    "what is your caste",
+    "what is your date of birth",
+    "what is your email address",
+    "what is your favourite colour",
+    "what is your favourite food",
+    "what is your favourite movie",
+    "what is your favourite song",
+    "what is your religion",
+    "what is your salary",
+    "when is your birthday",
+    "when were you born",
+    "where do you stay in pune",
+    "which hand do you write with",
+    "who is your favourite actor"
+   ],
+   "say": "Sorry, I can't access that information right now. You can talk to the real Alok, or find him on GitHub or LinkedIn and ask him yourself.",
+   "gesture": "present",
+   "mood": "neutral",
    "jumpTo": null
   }
  ]
