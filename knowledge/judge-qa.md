@@ -56,8 +56,11 @@ A: I have many friends, and they matter a lot to me. Teammates and friends from 
 **Q: How tall are you?**  _(also: What is your height?; How tall are you in feet?; Are you tall?)_
 A: I'm six foot one, which is about one hundred and eighty-five centimetres. It helps on the basketball court.  → jumps to the story: Dehradun, basketball, NDA, SSB  `[R]`
 
+**Q: How much do you weigh?**  _(also: What is your weight?; How heavy are you?; What is your weight in kg?)_
+A: I weigh sixty-eight kilograms, at six foot one, so I'm on the slim side.  `[R]`
+
 **Q: What do you look like?**  _(also: Describe yourself; Describe your appearance; What are your physical features?; What is your build?; Are you fit?)_
-A: I'm six foot one with a slim, lean build. I have thick black hair that falls into a fringe, dark eyes and strong straight eyebrows. This avatar is made from my photos, so it should look quite familiar.  `[C]`
+A: I'm six foot one, about sixty-eight kilograms, with a slim, lean build. I have thick black hair that falls into a fringe, dark eyes and strong straight eyebrows. This avatar is made from my photos, so it should look quite familiar.  `[C]`
 
 **Q: What colour is your hair?**  _(also: What is your hair like?; What is your hairstyle?)_
 A: My hair is thick and black, with a fringe that falls forward. In the avatar it's a little wavy, because the real thing has a mind of its own.  `[C]`
@@ -247,7 +250,7 @@ A: The story takes about five minutes. You can pause or skip any time, jump to a
 
 ### A. Facts I must not guess
 1. Date of birth / birthday?
-2. Weight (or "skip")?
+2. ~~Weight~~ (done: 68 kg)
 3. Agam: older or younger than you? His age, and what he does (school, college)?
 4. Your parents' work (or "keep private")?
 5. Ringo the real dog: breed, age, colour? And is the robot dog named after him?

@@ -466,6 +466,20 @@
    "jumpTo": "scene3"
   },
   {
+   "id": "qa_weight",
+   "q": "How much do you weigh?",
+   "keys": [
+    "how heavy are you",
+    "how much do you weigh",
+    "what is your weight",
+    "what is your weight in kg"
+   ],
+   "say": "I weigh sixty-eight kilograms, at six foot one, so I'm on the slim side.",
+   "gesture": "talk1",
+   "mood": "happy",
+   "jumpTo": null
+  },
+  {
    "id": "qa_looks",
    "q": "What do you look like?",
    "keys": [
@@ -476,7 +490,7 @@
     "what do you look like",
     "what is your build"
    ],
-   "say": "I'm six foot one with a slim, lean build. I have thick black hair that falls into a fringe, dark eyes and strong straight eyebrows. This avatar is made from my photos, so it should look quite familiar.",
+   "say": "I'm six foot one, about sixty-eight kilograms, with a slim, lean build. I have thick black hair that falls into a fringe, dark eyes and strong straight eyebrows. This avatar is made from my photos, so it should look quite familiar.",
    "gesture": "talk1",
    "mood": "neutral",
    "jumpTo": null

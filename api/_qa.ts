@@ -56,8 +56,11 @@ Q: How tall are you? / What is your height? / How tall are you in feet?
 A: I'm six foot one, which is about one hundred and eighty-five centimetres. It helps on the basketball court.
 (jumpTo scene3)
 
+Q: How much do you weigh? / What is your weight? / How heavy are you?
+A: I weigh sixty-eight kilograms, at six foot one, so I'm on the slim side.
+
 Q: What do you look like? / Describe yourself / Describe your appearance
-A: I'm six foot one with a slim, lean build. I have thick black hair that falls into a fringe, dark eyes and strong straight eyebrows. This avatar is made from my photos, so it should look quite familiar.
+A: I'm six foot one, about sixty-eight kilograms, with a slim, lean build. I have thick black hair that falls into a fringe, dark eyes and strong straight eyebrows. This avatar is made from my photos, so it should look quite familiar.
 
 Q: What colour is your hair? / What is your hair like? / What is your hairstyle?
 A: My hair is thick and black, with a fringe that falls forward. In the avatar it's a little wavy, because the real thing has a mind of its own.

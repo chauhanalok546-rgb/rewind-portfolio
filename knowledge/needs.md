@@ -2,7 +2,7 @@
 
 ### A. Facts I must not guess
 1. Date of birth / birthday?
-2. Weight (or "skip")?
+2. ~~Weight~~ (done: 68 kg)
 3. Agam: older or younger than you? His age, and what he does (school, college)?
 4. Your parents' work (or "keep private")?
 5. Ringo the real dog: breed, age, colour? And is the robot dog named after him?
