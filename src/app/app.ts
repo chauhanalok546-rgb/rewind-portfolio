@@ -304,9 +304,6 @@ function wireControls() {
   const cycleZoom = () => { const i = (LEVELS.indexOf(stage.getZoom()) + 1) % LEVELS.length; stage.setZoom(LEVELS[i]); toast(i === 0 ? 'Zoom: fit' : `Zoom out ${i}`) }
   $('c-zoom').addEventListener('click', cycleZoom)
   $('c-theme').addEventListener('click', () => stage.setTheme((stage.getTheme() === 'cinematic' ? 'lab' : 'cinematic') as Theme))
-  $('c-play').addEventListener('click', () => film.toggle())
-  $('c-prev').addEventListener('click', () => film.prev())
-  $('c-next').addEventListener('click', () => film.next())
   addEventListener('keydown', (e) => {
     if (state === 'FILM' || state === 'END') {
       if (e.code === 'Space' && !(e.target as HTMLElement)?.closest?.('button,a')) { e.preventDefault(); film.toggle() }
@@ -316,6 +313,7 @@ function wireControls() {
     }
     if (e.key === 'Escape' && state === 'ASK') sayNo()
     if ((e.key === '-' || e.key === '=') && !e.metaKey && !e.ctrlKey) { e.preventDefault(); if (e.key === '-') stage.setZoom(Math.min(1.45, stage.getZoom() + 0.22)); else stage.setZoom(Math.max(1, stage.getZoom() - 0.22)) }
+    if ((e.key === 'g' || e.key === 'G') && !e.metaKey && !e.ctrlKey) { const on = !stage.isCinematic(); stage.setCinematic(on); toast(on ? 'Cinematic glow on' : 'Cinematic glow off') }
     if ((e.key === 'c' || e.key === 'C') && !e.metaKey && !e.ctrlKey) $('c-cc').click()
     if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey) $('c-snd').click()
     if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !($('c-mic') as HTMLButtonElement).disabled) $('c-mic').click()

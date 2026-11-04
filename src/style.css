@@ -137,7 +137,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page);
   .coords { width: 170px; padding: 10px 12px; } .year { font-size: 38px; }
   .log { display: none; }
   .sticker { width: 48px; height: 48px; }
-  .chips, #c-prev, #c-play, #c-next, #c-mic { display: none; }
+  .chips, #c-mic { display: none; }
   .controlbar { bottom: 12px; padding: 8px 10px; }
   .nopress { top: 14px; right: 14px; bottom: auto; left: auto; }
   .classic { top: 44px; right: 14px; bottom: auto; }

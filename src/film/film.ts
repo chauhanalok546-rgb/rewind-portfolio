@@ -145,7 +145,6 @@ function setPaused(p: boolean) {
   paused = p
   if (p) { gsap.globalTimeline.pause(); avatar.audio?.pause(); sfx.suspend() }
   else { gsap.globalTimeline.resume(); void avatar.audio?.play().catch(() => undefined); sfx.resume() }
-  const b = $('c-play'); b.textContent = p ? '▶' : '⏸'; b.setAttribute('aria-label', p ? 'Play' : 'Pause')
 }
 
 function chipsInit() {
@@ -164,8 +163,6 @@ export const film = {
   begin(startScene = 0) {
     build(); chipsInit()
     document.documentElement.classList.add('film')
-    for (const id of ['c-prev', 'c-play', 'c-next']) ($(id) as HTMLButtonElement).disabled = false
-    ;($('c-play') as HTMLButtonElement).textContent = '⏸'
     traits.length = 0; $('traits').replaceChildren()
     setPaused(false); gsap.globalTimeline.resume()
     stage.avatar.setExpression('neutral')

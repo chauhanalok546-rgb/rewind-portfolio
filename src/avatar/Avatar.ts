@@ -118,11 +118,11 @@ export class Avatar {
     const el = this.audio
     if (!el || el.paused || el.ended) return null
     el.pause(); this.analyserMode = false
-    return { el, cues: this.cues, idx: this.cueIdx }
+    return { el, cues: this.cues, idx: this.cueIdx, lips: this.lips }
   }
-  resumeSpeech(s: { el: HTMLAudioElement; cues: VisemeCue[]; idx: number } | null, fadeMs = 0) {
+  resumeSpeech(s: { el: HTMLAudioElement; cues: VisemeCue[]; idx: number; lips: boolean } | null, fadeMs = 0) {
     if (!s) return
-    this.audio = s.el; this.cues = s.cues; this.cueIdx = s.idx; this.analyserMode = true
+    this.audio = s.el; this.cues = s.cues; this.cueIdx = s.idx; this.lips = s.lips; this.analyserMode = s.lips
     if (fadeMs > 0) { s.el.volume = 0; void s.el.play().catch(() => undefined); this.ramp(s.el, this.duckLevel, fadeMs) }      // his voice fades back in
     else void s.el.play().catch(() => undefined)
   }
@@ -297,11 +297,13 @@ export class Avatar {
     if (this.warmAudio.has(url)) return
     const el = new Audio(); el.crossOrigin = 'anonymous'; el.preload = 'auto'; el.src = url; el.load(); this.warmAudio.set(url, el)
   }
-  async speakAudio(audioUrl: string): Promise<void> {
+  private lips = true                // false while another voice (ARM-01) is playing: the avatar's mouth stays still
+  async speakAudio(audioUrl: string, opts?: { lips?: boolean }): Promise<void> {
+    const lips = opts?.lips !== false
     const ep = ++this.epoch
     // pre-computed mouth-shape cues (from the speech engine's word timings) sit next to every shipped clip: /x/line.mp3 -> /x/cues/line.json
     let cues: VisemeCue[] = []
-    if (!audioUrl.startsWith('blob:')) {
+    if (lips && !audioUrl.startsWith('blob:')) {
       const cuesUrl = audioUrl.replace(/\/([^/]+)\.mp3$/, '/cues/$1.json')
       cues = await Promise.race([fetch(cuesUrl).then((r) => (r.ok ? r.json() : null)).then((j) => (j?.cues ?? []) as VisemeCue[]).catch(() => [] as VisemeCue[]), new Promise<VisemeCue[]>((r) => setTimeout(() => r([]), 400))])
     }
@@ -314,9 +316,9 @@ export class Avatar {
       if (warm) warm.currentTime = 0
       el.crossOrigin = 'anonymous'
       el.muted = this.muted; el.volume = this.duckLevel
-      this.audio = el
-      this.analyserMode = true
-      this.ensureAudioGraph(el)
+      this.audio = el; this.lips = lips
+      this.analyserMode = lips
+      if (lips) this.ensureAudioGraph(el)                                      // his own voice drives the lips; ARM-01's radio voice just plays
       const done = () => { if (this.audio === el) this.analyserMode = false; resolve() }
       el.onended = done; el.onerror = done
       el.play().catch(done)

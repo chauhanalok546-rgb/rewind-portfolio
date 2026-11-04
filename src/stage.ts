@@ -1,4 +1,9 @@
 import * as THREE from 'three'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import gsap from 'gsap'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { Avatar } from './avatar/Avatar'
@@ -235,10 +240,35 @@ export const isCloseUp = () => closeUp
 export function setZoom(z: number) { userZoom = z; resize() }
 export const getZoom = () => userZoom
 
+// ---- cinematic finish: bloom around everything that glows and a gentle colour grade. If the machine cannot hold the frame rate it switches itself off.
+const gradeShader = {
+  uniforms: { tDiffuse: { value: null }, uSat: { value: 1.1 }, uShadow: { value: new THREE.Color(0.0, 0.015, 0.05) }, uHigh: { value: new THREE.Color(0.05, 0.025, 0.0) } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uSat; uniform vec3 uShadow; uniform vec3 uHigh; varying vec2 vUv;
+    void main(){ vec4 t = texture2D(tDiffuse, vUv); vec3 c = t.rgb; float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      c = mix(vec3(l), c, uSat);                                   // a touch more colour
+      c += mix(uShadow, uHigh, smoothstep(0.05, 0.8, l)) * min(1.0, t.a * 4.0);   // cool shadows, warm highlights
+      float a = max(t.a, max(c.r, max(c.g, c.b)));                  // glow outside the models stays visible on the transparent canvas
+      gl_FragColor = vec4(c, min(a, 1.0)); }`,
+}
+let composer: EffectComposer | null = null, bloom: UnrealBloomPass | null = null
+let cinematic = !lowEnd && !reducedMotion && !/[?&]fx=off/.test(location.search), lowFpsSeconds = 0
+function initComposer() {
+  if (composer || !cinematic) return
+  composer = new EffectComposer(renderer)
+  composer.addPass(new RenderPass(scene, camera))
+  bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.42, 0.55, 0.92); composer.addPass(bloom)
+  composer.addPass(new ShaderPass(gradeShader)); composer.addPass(new OutputPass())
+  composer.setPixelRatio(Math.min(devicePixelRatio, dprCap)); composer.setSize(innerWidth, innerHeight)
+}
+export function setCinematic(on: boolean) { cinematic = on; lowFpsSeconds = 0; if (on) initComposer() }
+export const isCinematic = () => cinematic && !!composer
+
 function resize() {
   const w = innerWidth, h = innerHeight
   const dpr = Math.min(devicePixelRatio, dprCap)
   renderer.setPixelRatio(dpr); renderer.setSize(w, h, false)
+  if (composer) { composer.setPixelRatio(dpr); composer.setSize(w, h) }
   camera.aspect = w / h
   // fit the whole set: the sides of the scene (dog, arm, machines) span about +/-2 world units, so pull back and widen the lens for narrower windows
   const a = w / h, SPAN = 2.05
@@ -261,6 +291,7 @@ addEventListener('pointermove', (e) => {
   avatar.setLookTarget(nx, ny); pointer.set(nx, ny)
 })
 
+const log_fx = (m: string) => console.info('[fx]', m)
 let warped = false
 let prevT = performance.now()
 let elapsed = 0
@@ -293,11 +324,13 @@ function tick() {
     camera.fov = baseFov + fx.warp * 22; camera.updateProjectionMatrix(); warped = true
   } else if (warped) { camera.fov = baseFov; camera.updateProjectionMatrix(); warped = false }
   camera.lookAt(lookNow)
-  renderer.render(scene, camera)
+  if (cinematic) { initComposer(); if (bloom) bloom.strength = theme === 'lab' ? 0.12 : 0.42 }
+  if (cinematic && composer) composer.render(dt); else renderer.render(scene, camera)
   perf.calls = renderer.info.render.calls; perf.tris = renderer.info.render.triangles
   frames++; fpsT += dt
   if (fpsT >= 1) {
     perf.fps = frames / fpsT; frames = 0; fpsT = 0; perf.dpr = Math.min(devicePixelRatio, dprCap)
+    if (cinematic && composer && perf.fps < 46) { if (++lowFpsSeconds >= 3) { cinematic = false; log_fx('glow off: frame rate'); } } else lowFpsSeconds = 0
     if (perf.fps < 42 && dprCap > 1) { dprCap = Math.max(1, dprCap - 0.25); resize() }   // adaptive resolution
   }
   if (running) requestAnimationFrame(tick)
@@ -320,7 +353,7 @@ export async function loadStage(onProgress: (f: number) => void) {
 }
 tick()
 
-export const stage = { setZoom, getZoom, avatar, narrator, dog, robot, machine, hovercar, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
+export const stage = { setCinematic, isCinematic, setZoom, getZoom, avatar, narrator, dog, robot, machine, hovercar, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
 ;(window as unknown as Record<string, unknown>).__stage = stage
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
 ;(window as unknown as Record<string, unknown>).__narrator = narrator

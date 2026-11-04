@@ -1,6 +1,6 @@
 /** Speech recognition (Web Speech API) for short voice commands. English (India), falling back to US English.
  *  Starts only after the Enter click, shows a clear indicator while listening, never stores audio. */
-interface SR { lang: string; continuous: boolean; interimResults: boolean; maxAlternatives: number; start(): void; stop(): void; abort(): void
+interface SR { lang: string; continuous: boolean; interimResults: boolean; maxAlternatives: number; start(track?: MediaStreamTrack): void; stop(): void; abort(): void
   onresult: ((e: { resultIndex: number; results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null
   onerror: ((e: { error: string }) => void) | null; onend: (() => void) | null; onstart: (() => void) | null }
 type SRCtor = new () => SR
@@ -10,6 +10,20 @@ export const voiceSupported = !!Ctor
 
 export class Recognizer {
   private rec?: SR
+  private stream: MediaStream | null = null
+  /** a microphone track with echo cancellation, noise suppression and gain control switched on: what he says through the speakers is subtracted
+   *  from what the recogniser hears, so "Hey Alok" gets through while he is talking (Chrome lets start() take a track; other browsers ignore it) */
+  private async track(): Promise<MediaStreamTrack | null> {
+    try {
+      this.stream ??= await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+      return this.stream.getAudioTracks()[0] ?? null
+    } catch { return null }
+  }
+  private async begin(r: SR) {
+    const t = await this.track()
+    try { if (t) r.start(t); else r.start() }
+    catch { try { r.start() } catch { this.rec = undefined } }
+  }
   private wantOn = false
   private lang = 'en-IN'
   private errors = 0
@@ -40,7 +54,7 @@ export class Recognizer {
       else if (this.state !== 'blocked') this.set('off')
     }
     this.rec = r
-    try { r.start() } catch { this.rec = undefined }
+    void this.begin(r)
   }
   stop() { this.wantOn = false; this.rec?.stop(); if (this.state === 'listening') this.set('off') }
   toggle() { if (this.wantOn) this.stop(); else this.start() }

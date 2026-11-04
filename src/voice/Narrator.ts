@@ -39,7 +39,7 @@ export class Narrator {
     const my = ++this.token
     this.onCaption?.(line.text, line)
     this.mood(line)
-    await this.avatar.speakAudio(`${this.base}/${line.id}.mp3`)
+    await this.avatar.speakAudio(`${this.base}/${line.id}.mp3`, { lips: line.speaker !== 'ARM-01' })
     if (my !== this.token) return
     this.onCaption?.(null)
     this.avatar.setExpression('neutral')
@@ -54,7 +54,7 @@ export class Narrator {
       if (!line) continue
       this.onCaption?.(line.text, line)
       this.mood(line)
-      await this.avatar.speakAudio(`${this.base}/${line.id}.mp3`)
+      await this.avatar.speakAudio(`${this.base}/${line.id}.mp3`, { lips: line.speaker !== 'ARM-01' })
       if (my !== this.token) return
       this.onCaption?.(null)
       await new Promise((r) => setTimeout(r, gapMs))
