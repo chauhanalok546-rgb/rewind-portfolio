@@ -23,3 +23,15 @@ export function isEcho(text: string, recent: string[]): boolean {
   const hit = heard.filter((x) => pool.has(x)).length
   return hit / heard.length >= 0.6
 }
+
+/** "Hey Alok, listen": the wake phrase. Tolerant of how speech recognition hears the name ("a lock", "aloke", "alock"...).
+ *  Returns null when there is no wake phrase, otherwise whatever was said after it (possibly the question itself). */
+const NAME = '(?:alok|aloke|alock|a lock|aluk|alokh|aloc|alex)'
+const WAKE_A = new RegExp(`\\b(?:hey|hi|hello|okay|ok|yo|hay|he)\\s+${NAME}\\b(.*)$`)
+const WAKE_B = new RegExp(`\\b${NAME}\\s+(?:listen|are you there|can you hear me|wake up|hear me)\\b(.*)$`)
+const WAKE_C = new RegExp(`\\blisten\\s+${NAME}\\b(.*)$`)
+export function wakePhrase(text: string): string | null {
+  const t = norm(text)
+  for (const re of [WAKE_A, WAKE_B, WAKE_C]) { const m = re.exec(t); if (m) return m[1].replace(/^\s*(listen|please|can you hear me|are you there)\b/, '').trim() }
+  return null
+}

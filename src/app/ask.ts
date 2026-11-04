@@ -3,6 +3,7 @@ import { film } from '../film/film'
 import { $, log } from './hud'
 import { askBrain, speakBrowser, stopBrowserSpeech, SUGGESTIONS, type Answer } from '../brain/brain'
 import type { State } from './app'
+import { sfx } from '../audio/sfx'
 
 /** "Ask Alok": the moment it is opened everything stops where it is (the film, the line he is saying, his wandering). He listens, answers the
  *  visitor's question out loud, and then the world picks up exactly where it left off: the same line continues from the same word. */
@@ -14,7 +15,7 @@ let held = false, wasPlaying = false, wasAuto = false
 let snap: ReturnType<typeof avatar.holdSpeech> = null
 let prevCaption = { text: '', on: false }
 
-export function initAsk(d: Deps): { ask: (q: string) => Promise<void> } {
+export function initAsk(d: Deps): { ask: (q: string) => Promise<void>; listen: () => void; isListening: () => boolean } {
   const box = $('askbox'), input = $('askbox-input') as HTMLInputElement, mic = $('askbox-mic'), form = $('askbox-form')
   const chips = $('askbox-chips')
   for (const s of SUGGESTIONS) { const c = document.createElement('button'); c.type = 'button'; c.className = 'chip'; c.textContent = s; c.addEventListener('click', () => void submit(s)); chips.appendChild(c) }
@@ -37,7 +38,7 @@ export function initAsk(d: Deps): { ask: (q: string) => Promise<void> } {
     if (wasPlaying) film.resume()
   }
   const open = () => { holdWorld(); box.classList.remove('hidden'); box.setAttribute('aria-hidden', 'false'); requestAnimationFrame(() => input.focus()) }
-  const close = () => { askToken++; stopAnswer(); working = false; hide(); releaseWorld() }
+  const close = () => { askToken++; stopAnswer(); working = false; listening = false; clearTimeout(listenTimer); hide(); releaseWorld() }
   const hide = () => { if (box.contains(document.activeElement)) (document.activeElement as HTMLElement).blur(); box.classList.add('hidden'); box.setAttribute('aria-hidden', 'true') }
   $('c-ask').addEventListener('click', () => (box.classList.contains('hidden') ? open() : close()))
   $('askbox-close').addEventListener('click', close)
@@ -52,7 +53,24 @@ export function initAsk(d: Deps): { ask: (q: string) => Promise<void> } {
   /** cut off whatever answer is being spoken right now (his voice, the browser voice, the jaw flap) */
   function stopAnswer() { avatar.stop(); stopBrowserSpeech(); avatar.flapping = false }
 
+  /** "Hey Alok, listen": everything stops where it is, he perks up and waits (up to 9 s) for the visitor's question, which the app then passes to submit */
+  let listening = false, listenTimer: ReturnType<typeof setTimeout> | undefined
+  function listen() {
+    if (listening) return
+    askToken++; if (working) { stopAnswer(); working = false }                      // if he was answering, that stops too
+    listening = true; holdWorld(); hide()
+    sfx.chime(); avatar.setExpression('happy'); avatar.play('talk1'); avatar.lookAtVisitor(0, 0.05, 20000)
+    d.caption('Listening… go ahead and ask me anything.'); log('Listening for a question')
+    listenTimer = setTimeout(() => {
+      if (!listening) return
+      listening = false
+      d.caption("I didn't catch a question. Say “Hey Alok, listen” whenever you want to ask.")
+      setTimeout(() => { if (!listening && !working) releaseWorld() }, 2600)
+    }, 9000)
+  }
+
   async function submit(q: string) {
+    listening = false; clearTimeout(listenTimer)
     const my = ++askToken                                                          // a question picked while another is being answered replaces it at once
     if (working) stopAnswer()
     working = true; input.value = ''; holdWorld()                                  // the panel stays open so another question can be picked
@@ -76,5 +94,5 @@ export function initAsk(d: Deps): { ask: (q: string) => Promise<void> } {
     else { avatar.flapping = true; await speakBrowser(a.say); if (my === askToken) avatar.flapping = false }
     if (a.audio?.startsWith('blob:')) URL.revokeObjectURL(a.audio)
   }
-  return { ask: submit }
+  return { ask: submit, listen, isListening: () => listening }
 }

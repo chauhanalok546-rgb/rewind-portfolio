@@ -10,7 +10,7 @@ import { startPresence, type Presence } from '../sense/presence'
 import { Recognizer, voiceSupported } from '../voice/recognizer'
 import { parseCommand } from '../voice/parse'
 import { initAsk } from './ask'
-import { isEcho, looksLikeQuestion } from '../voice/question'
+import { isEcho, looksLikeQuestion, wakePhrase } from '../voice/question'
 
 /** The experience as an explicit state machine:  BOOT → ENTER → LOBBY → PRESENCE → GREETING → ASK → TRANSITION → ARRIVED
  *  (the film itself arrives in the next phase).  Any state can be jumped to with a URL hash, e.g. #ask or #lobby. */
@@ -134,8 +134,22 @@ function heard(text: string) {
 let askCapture: ((t: string) => void) | null = null   // set while the Ask Alok panel waits for a dictated question
 function handleSpeech(text: string) {
   if (askCapture) { const f = askCapture; askCapture = null; f(text); return }
+  // "Hey Alok, listen": wake him; if a question follows in the same breath he answers it straight away
+  if (askApi && !['BOOT', 'ENTER', 'TRANSITION'].includes(state)) {
+    const rest = wakePhrase(text)
+    if (rest !== null) {
+      heard(text); log('Voice: wake phrase')
+      if (rest.split(' ').filter(Boolean).length >= 3) void askApi.ask(rest); else askApi.listen()
+      return
+    }
+    if (askApi.isListening()) {                                           // he is listening: the next thing said is the question
+      const words = text.trim().split(/\s+/).filter(Boolean)
+      if (words.length >= 2) { heard(text); void askApi.ask(text.trim()) }
+      return
+    }
+  }
   const cmd = parseCommand(text, { asking: state === 'ASK', inFilm: state === 'FILM' || state === 'END' })
-  if (!cmd) { handsFreeQuestion(text); return }
+  if (!cmd) { if (!WAKE_REQUIRED) handsFreeQuestion(text); return }
   heard(text); log(`Voice: ${cmd.type}${cmd.type === 'year' ? ' ' + cmd.year : ''}`)
   switch (cmd.type) {
     case 'yes': void sayYes(); break
@@ -152,7 +166,8 @@ function handleSpeech(text: string) {
 }
 /** Hands-free: a question spoken to him is answered on his own (the world pauses, he answers, the world carries on). Ignored while he is
  *  talking, for a moment after, and whenever the words are just his own voice coming back through the speakers. */
-let askApi: { ask: (q: string) => Promise<void> } | null = null
+let askApi: { ask: (q: string) => Promise<void>; listen: () => void; isListening: () => boolean } | null = null
+const WAKE_REQUIRED = true      // true: he only answers after "Hey Alok, listen" (or a question that starts with "Hey Alok"); false: any clear question also works
 function handsFreeQuestion(text: string) {
   if (!askApi || ['BOOT', 'ENTER', 'TRANSITION'].includes(state)) return
   if (!looksLikeQuestion(text)) return
@@ -165,13 +180,13 @@ function handsFreeQuestion(text: string) {
 function startVoice() {
   if (!voiceSupported) return
   const mic = $('c-mic') as HTMLButtonElement
-  mic.disabled = false; mic.title = 'Talk to Alok: ask him a question out loud, or say pause, skip, back, replay, contact or a year (M)'
+  mic.disabled = false; mic.title = 'Say “Hey Alok, listen” and ask him anything. Also: pause, skip, back, replay, contact or a year (M)'
   recognizer.onFinal = handleSpeech
   recognizer.onState = (st) => {
     const on = st === 'listening'
     mic.classList.toggle('listening', on); mic.setAttribute('aria-pressed', String(on))
     document.documentElement.dataset.voice = on ? 'on' : 'off'
-    if (on && !mic.dataset.logged) { mic.dataset.logged = '1'; log('Microphone listening ✓') }
+    if (on && !mic.dataset.logged) { mic.dataset.logged = '1'; log('Microphone listening ✓'); toast('Say “Hey Alok, listen” to ask me anything') }
     if (st === 'blocked') { mic.disabled = true; mic.title = 'Microphone blocked: buttons do everything'; log('Microphone declined') }
   }
   recognizer.start()

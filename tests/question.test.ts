@@ -14,3 +14,17 @@ test('echo of his own voice is ignored', () => {
   assert.equal(isEcho('welcome to my lab I am alok chauhan', said), true)
   assert.equal(isEcho('what is your biggest setback', said), false)
 })
+
+import { wakePhrase } from '../src/voice/question.ts'
+test('the wake phrase is recognised and the rest is returned', () => {
+  assert.equal(wakePhrase('hey alok listen'), '')
+  assert.equal(wakePhrase('Hey Alok, listen!'), '')
+  assert.equal(wakePhrase('hey a lock listen'), '')
+  assert.equal(wakePhrase('ok alok'), '')
+  assert.equal(wakePhrase('alok are you there'), '')
+  assert.equal(wakePhrase('hey alok what is your biggest setback'), 'what is your biggest setback')
+  assert.equal(wakePhrase('hey alok listen why do you want to join wispr flow'), 'why do you want to join wispr flow')
+})
+test('ordinary speech and his own narration do not wake him', () => {
+  for (const t of ['alok chauhan first year computer science', 'hello and welcome to my lab', 'what is your biggest setback', 'i am alok', 'pause']) assert.equal(wakePhrase(t), null, t)
+})
