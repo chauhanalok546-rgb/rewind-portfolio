@@ -30,8 +30,12 @@ const NAME = '(?:alok|aloke|alock|a lock|aluk|alokh|aloc|alex)'
 const WAKE_A = new RegExp(`\\b(?:hey|hi|hello|okay|ok|yo|hay|he)\\s+${NAME}\\b(.*)$`)
 const WAKE_B = new RegExp(`\\b${NAME}\\s+(?:listen|are you there|can you hear me|wake up|hear me)\\b(.*)$`)
 const WAKE_C = new RegExp(`\\blisten\\s+${NAME}\\b(.*)$`)
+// ways of interrupting him mid-story: "excuse me Alok", "wait Alok", "Alok, hold on / stop / one second / question" (his name is always required for hold on / stop / wait, because his own script says those)
+const WAKE_D = new RegExp(`\\b(?:excuse me|sorry|wait|hold on|stop|pause)\\s+${NAME}\\b(.*)$`)
+const WAKE_E = new RegExp(`\\b${NAME}\\s+(?:wait|stop|hold on|pause|one second|just a second|just a minute|excuse me|i have a question|question)\\b(.*)$`)
+const WAKE_F = /\b(?:i have a question|i got a question|can i ask (?:you )?(?:something|a question)|may i ask (?:you )?(?:something|a question)|i want to ask (?:you )?(?:something|a question)|quick question)\b(.*)$/
 export function wakePhrase(text: string): string | null {
   const t = norm(text)
-  for (const re of [WAKE_A, WAKE_B, WAKE_C]) { const m = re.exec(t); if (m) return m[1].replace(/^\s*(listen|please|can you hear me|are you there)\b/, '').trim() }
+  for (const re of [WAKE_A, WAKE_B, WAKE_C, WAKE_D, WAKE_E, WAKE_F]) { const m = re.exec(t); if (m) return m[1].replace(/^\s*(listen|please|can you hear me|are you there|for a second|one second|a second)\b/, '').trim() }
   return null
 }

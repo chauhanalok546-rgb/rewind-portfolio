@@ -28,3 +28,15 @@ test('the wake phrase is recognised and the rest is returned', () => {
 test('ordinary speech and his own narration do not wake him', () => {
   for (const t of ['alok chauhan first year computer science', 'hello and welcome to my lab', 'what is your biggest setback', 'i am alok', 'pause']) assert.equal(wakePhrase(t), null, t)
 })
+
+test('more ways to interrupt him, but never his own words', () => {
+  assert.equal(wakePhrase('excuse me alok'), '')
+  assert.equal(wakePhrase('wait alok'), '')
+  assert.equal(wakePhrase('alok hold on'), '')
+  assert.equal(wakePhrase('alok i have a question'), '')
+  assert.equal(wakePhrase('i have a question'), '')
+  assert.equal(wakePhrase('i have a question what is your favourite project'), 'what is your favourite project')
+  assert.equal(wakePhrase('hold on we are going back'), null)         // his own line
+  assert.equal(wakePhrase('stop'), null)
+  assert.equal(wakePhrase('wait'), null)
+})

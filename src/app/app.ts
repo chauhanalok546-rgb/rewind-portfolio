@@ -131,17 +131,24 @@ function heard(text: string) {
   const el = document.createElement('div'); el.className = 'heard'; el.textContent = `“${text.trim()}”`
   document.getElementById('app')!.appendChild(el); setTimeout(() => el.remove(), 2500)
 }
+let lastWake = 0
+/** The wake phrase, heard either mid-sentence (interim = true: he reacts at once, even while talking) or once the sentence is finished. */
+function onWake(text: string, interim: boolean): boolean {
+  if (!askApi || ['BOOT', 'ENTER', 'TRANSITION'].includes(state)) return false
+  const rest = wakePhrase(text); if (rest === null) return false
+  const now = performance.now()
+  if (interim) { if (!askApi.isListening() && now - lastWake > 2500) { lastWake = now; log('Voice: wake phrase'); askApi.listen() } return true }
+  heard(text)
+  if (rest.split(' ').filter(Boolean).length >= 3) { lastWake = now; void askApi.ask(rest) }       // the question came with the wake phrase
+  else if (!askApi.isListening() && now - lastWake > 2500) { lastWake = now; log('Voice: wake phrase'); askApi.listen() }
+  return true
+}
 let askCapture: ((t: string) => void) | null = null   // set while the Ask Alok panel waits for a dictated question
 function handleSpeech(text: string) {
   if (askCapture) { const f = askCapture; askCapture = null; f(text); return }
   // "Hey Alok, listen": wake him; if a question follows in the same breath he answers it straight away
   if (askApi && !['BOOT', 'ENTER', 'TRANSITION'].includes(state)) {
-    const rest = wakePhrase(text)
-    if (rest !== null) {
-      heard(text); log('Voice: wake phrase')
-      if (rest.split(' ').filter(Boolean).length >= 3) void askApi.ask(rest); else askApi.listen()
-      return
-    }
+    if (onWake(text, false)) return
     if (askApi.isListening()) {                                           // he is listening: the next thing said is the question
       const words = text.trim().split(/\s+/).filter(Boolean)
       if (words.length >= 2) { heard(text); void askApi.ask(text.trim()) }
@@ -182,6 +189,7 @@ function startVoice() {
   const mic = $('c-mic') as HTMLButtonElement
   mic.disabled = false; mic.title = 'Say “Hey Alok, listen” and ask him anything. Also: pause, skip, back, replay, contact or a year (M)'
   recognizer.onFinal = handleSpeech
+  recognizer.onInterim = (t) => { if (!askCapture) onWake(t, true) }
   recognizer.onState = (st) => {
     const on = st === 'listening'
     mic.classList.toggle('listening', on); mic.setAttribute('aria-pressed', String(on))
@@ -325,4 +333,4 @@ export async function startApp() {
   }
 }
 export { toast }
-;(window as unknown as Record<string, unknown>).__heard = handleSpeech     // dev hook: pretend the microphone heard this sentence
+;(window as unknown as Record<string, unknown>).__heard = handleSpeech;(window as unknown as Record<string, unknown>).__heardInterim = (t: string) => onWake(t, true)     // dev hook: pretend the microphone heard this sentence

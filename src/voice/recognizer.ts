@@ -15,6 +15,8 @@ export class Recognizer {
   private errors = 0
   state: 'off' | 'listening' | 'blocked' | 'unsupported' = voiceSupported ? 'off' : 'unsupported'
   onFinal?: (text: string) => void
+  /** words as they are being recognised (before the sentence is finished): lets him react to "Hey Alok" at once, even mid-sentence */
+  onInterim?: (text: string) => void
   onState?: (s: Recognizer['state']) => void
 
   private set(s: Recognizer['state']) { this.state = s; this.onState?.(s) }
@@ -24,9 +26,9 @@ export class Recognizer {
     this.wantOn = true
     if (this.rec) return
     const r = new Ctor()
-    r.lang = this.lang; r.continuous = true; r.interimResults = false; r.maxAlternatives = 1
+    r.lang = this.lang; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1
     r.onstart = () => this.set('listening')
-    r.onresult = (e) => { for (let i = e.resultIndex; i < e.results.length; i++) { const res = e.results[i]; if (res.isFinal) this.onFinal?.(res[0].transcript) } }
+    r.onresult = (e) => { for (let i = e.resultIndex; i < e.results.length; i++) { const res = e.results[i]; if (res.isFinal) this.onFinal?.(res[0].transcript); else this.onInterim?.(res[0].transcript) } }
     r.onerror = (e) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { this.wantOn = false; this.set('blocked') }
       else if (e.error === 'language-not-supported' && this.lang !== 'en-US') this.lang = 'en-US'
