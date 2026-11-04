@@ -260,10 +260,16 @@ export class Avatar {
   stop() { this.audio?.pause(); this.cues = []; this.analyserMode = false }
 
   /** Plays any audio and lip-syncs it from the sound itself (loudness drives the jaw, brightness picks the mouth shape). */
-  speakAudio(audioUrl: string): Promise<void> {
+  async speakAudio(audioUrl: string): Promise<void> {
+    // pre-computed mouth-shape cues (from the speech engine's word timings) sit next to every shipped clip: /x/line.mp3 -> /x/cues/line.json
+    let cues: VisemeCue[] = []
+    if (!audioUrl.startsWith('blob:')) {
+      const cuesUrl = audioUrl.replace(/\/([^/]+)\.mp3$/, '/cues/$1.json')
+      cues = await Promise.race([fetch(cuesUrl).then((r) => (r.ok ? r.json() : null)).then((j) => (j?.cues ?? []) as VisemeCue[]).catch(() => [] as VisemeCue[]), new Promise<VisemeCue[]>((r) => setTimeout(() => r([]), 400))])
+    }
     return new Promise<void>((resolve) => {
       this.audio?.pause()
-      this.cues = []
+      this.cues = cues; this.cueIdx = 0
       const el = new Audio(audioUrl)
       el.crossOrigin = 'anonymous'
       el.muted = this.muted
@@ -426,12 +432,28 @@ export class Avatar {
       const open = Math.min(1, Math.max(0, (rms - 0.02) / 0.3)) ** 0.85
       this.level = damp(this.level, open, open > this.level ? 28 : 14, dt)        // quick attack, softer release
       const o = this.level
-      if (centroid < 1500) { this.want('viseme_O', o * 0.6); this.want('viseme_U', o * 0.22) }
-      else if (centroid < 2700) { this.want('viseme_aa', o * 0.65); this.want('viseme_E', o * 0.2) }
-      else { this.want('viseme_I', o * 0.35); this.want('viseme_SS', o * 0.3) }
-      // lips press together on sudden dips between words
-      this.dip = damp(this.dip, o < 0.06 ? 1 : 0, 10, dt)
-      this.want('viseme_PP', this.dip * 0.3 * (this.level > 0 ? 1 : 0))
+      if (this.cues.length && this.audio) {
+        // exact shapes from the word timings (looked up a hair early, since lips lead the sound), opened by how loud the speech really is
+        const at = this.audio.currentTime + 0.035
+        while (this.cueIdx > 0 && at < this.cues[this.cueIdx].t) this.cueIdx--
+        while (this.cueIdx < this.cues.length - 1 && at >= this.cues[this.cueIdx].t + this.cues[this.cueIdx].d) this.cueIdx++
+        const cue = this.cues[this.cueIdx]
+        if (cue && at >= cue.t && at < cue.t + cue.d) {
+          const v = cue.v.slice(7)
+          if (/^(aa|E|I|O|U)$/.test(v)) this.want(cue.v, Math.min(1, 0.22 + o * 0.95) * (v === 'aa' ? 0.85 : 0.7))
+          else if (v === 'PP') this.want(cue.v, 0.7)                                             // lips fully closed for p, b, m
+          else if (v === 'FF' || v === 'TH') this.want(cue.v, 0.6)
+          else this.want(cue.v, 0.3 + o * 0.3)
+          if (!/^(aa|E|I|O|U|PP)$/.test(v)) this.want('viseme_aa', o * 0.18)                  // a little jaw under the consonants
+        } else this.want('viseme_PP', this.level < 0.05 ? 0.12 : 0)                            // between words the lips rest together
+      } else {
+        if (centroid < 1500) { this.want('viseme_O', o * 0.6); this.want('viseme_U', o * 0.22) }
+        else if (centroid < 2700) { this.want('viseme_aa', o * 0.65); this.want('viseme_E', o * 0.2) }
+        else { this.want('viseme_I', o * 0.35); this.want('viseme_SS', o * 0.3) }
+        // lips press together on sudden dips between words
+        this.dip = damp(this.dip, o < 0.06 ? 1 : 0, 10, dt)
+        this.want('viseme_PP', this.dip * 0.3 * (this.level > 0 ? 1 : 0))
+      }
     } else if (this.flapping) {
       const f = Math.max(0, Math.sin(t * 17) * 0.5 + Math.sin(t * 7.3) * 0.5)
       this.level = damp(this.level, f * 0.7, 20, dt)
@@ -439,7 +461,7 @@ export class Avatar {
     } else this.level = damp(this.level, 0, 12, dt)
 
     // ---- lip-sync: the current cue is held (no per-cue pulsing), mouth closes in silences
-    if (this.audio && this.cues.length) {
+    if (this.audio && this.cues.length && !this.analyserMode) {
       const at = this.audio.currentTime
       while (this.cueIdx > 0 && at < this.cues[this.cueIdx].t) this.cueIdx--
       while (this.cueIdx < this.cues.length - 1 && at >= this.cues[this.cueIdx].t + this.cues[this.cueIdx].d) this.cueIdx++
@@ -460,7 +482,7 @@ export class Avatar {
     // ---- apply with per-channel smoothing
     for (let i = 0; i < this.values.length; i++) {
       const name = this.morphNames[i]
-      const rate = name.startsWith('eyeBlink') ? 38 : name.startsWith('viseme_') ? 16 : 10
+      const rate = name.startsWith('eyeBlink') ? 38 : name.startsWith('viseme_') ? 24 : 10
       const v = damp(this.values[i], this.wanted[i], rate, dt)
       this.values[i] = v
       for (const [m, idx] of this.morphSlots[i]) m.morphTargetInfluences![idx] = v

@@ -15,7 +15,7 @@
    "gesture": "present",
    "mood": "happy",
    "jumpTo": null,
-   "duration": 17.3
+   "duration": 19.38
   },
   {
    "id": "wispr",
@@ -31,7 +31,7 @@
    "gesture": "talk1",
    "mood": "happy",
    "jumpTo": "scene5",
-   "duration": 12.58
+   "duration": 14.09
   },
   {
    "id": "setback",
@@ -48,7 +48,7 @@
    "gesture": "talk2",
    "mood": "serious",
    "jumpTo": "scene3",
-   "duration": 15.06
+   "duration": 16.87
   },
   {
    "id": "proud",
@@ -63,7 +63,7 @@
    "gesture": "present",
    "mood": "proud",
    "jumpTo": "scene4",
-   "duration": 16.69
+   "duration": 18.71
   },
   {
    "id": "bugslayer",
@@ -78,7 +78,7 @@
    "gesture": "talk1",
    "mood": "neutral",
    "jumpTo": "scene4",
-   "duration": 13.54
+   "duration": 15.16
   },
   {
    "id": "skills",
@@ -95,7 +95,7 @@
    "gesture": "talk2",
    "mood": "neutral",
    "jumpTo": "scene4",
-   "duration": 11.48
+   "duration": 12.86
   },
   {
    "id": "pressure",
@@ -110,7 +110,7 @@
    "gesture": "talk1",
    "mood": "neutral",
    "jumpTo": null,
-   "duration": 11.93
+   "duration": 13.36
   },
   {
    "id": "team",
@@ -126,7 +126,7 @@
    "gesture": "talk2",
    "mood": "happy",
    "jumpTo": "scene4",
-   "duration": 13.26
+   "duration": 14.85
   },
   {
    "id": "learning",
@@ -141,7 +141,7 @@
    "gesture": "talk1",
    "mood": "neutral",
    "jumpTo": "scene5",
-   "duration": 12.93
+   "duration": 14.48
   },
   {
    "id": "product",
@@ -157,7 +157,7 @@
    "gesture": "present",
    "mood": "happy",
    "jumpTo": "scene5",
-   "duration": 12.21
+   "duration": 13.66
   },
   {
    "id": "pick",
@@ -173,7 +173,7 @@
    "gesture": "present",
    "mood": "proud",
    "jumpTo": null,
-   "duration": 12.91
+   "duration": 14.45
   },
   {
    "id": "outside",
@@ -191,7 +191,7 @@
    "gesture": "talk2",
    "mood": "happy",
    "jumpTo": "scene3",
-   "duration": 13.56
+   "duration": 15.19
   },
   {
    "id": "real",
@@ -207,7 +207,7 @@
    "gesture": "talk1",
    "mood": "happy",
    "jumpTo": null,
-   "duration": 10.4
+   "duration": 11.64
   },
   {
    "id": "contact",
@@ -224,7 +224,7 @@
    "gesture": "point",
    "mood": "happy",
    "jumpTo": "scene6",
-   "duration": 10.85
+   "duration": 12.15
   },
   {
    "id": "chess",
@@ -239,7 +239,7 @@
    "gesture": "talk1",
    "mood": "happy",
    "jumpTo": "scene1",
-   "duration": 10.83
+   "duration": 12.12
   }
  ]
 }
