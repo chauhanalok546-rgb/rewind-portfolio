@@ -270,16 +270,19 @@ export class Avatar {
 
   setMuted(m: boolean) { this.muted = m; if (this.audio) this.audio.muted = m }
 
-  stop() { this.audio?.pause(); this.cues = []; this.analyserMode = false }
+  private epoch = 0                  // bumped by every new utterance and by stop(): a clip still fetching its cues when this changes never starts
+  stop() { this.epoch++; this.audio?.pause(); this.cues = []; this.analyserMode = false }
 
   /** Plays any audio and lip-syncs it from the sound itself (loudness drives the jaw, brightness picks the mouth shape). */
   async speakAudio(audioUrl: string): Promise<void> {
+    const ep = ++this.epoch
     // pre-computed mouth-shape cues (from the speech engine's word timings) sit next to every shipped clip: /x/line.mp3 -> /x/cues/line.json
     let cues: VisemeCue[] = []
     if (!audioUrl.startsWith('blob:')) {
       const cuesUrl = audioUrl.replace(/\/([^/]+)\.mp3$/, '/cues/$1.json')
       cues = await Promise.race([fetch(cuesUrl).then((r) => (r.ok ? r.json() : null)).then((j) => (j?.cues ?? []) as VisemeCue[]).catch(() => [] as VisemeCue[]), new Promise<VisemeCue[]>((r) => setTimeout(() => r([]), 400))])
     }
+    if (ep !== this.epoch) return                                              // replaced or stopped while its cues were loading
     return new Promise<void>((resolve) => {
       this.audio?.pause()
       this.cues = cues; this.cueIdx = 0

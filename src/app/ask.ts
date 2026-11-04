@@ -9,6 +9,7 @@ import type { State } from './app'
 interface Deps { getState: () => State; caption: (t: string | null) => void; startListening: (onText: (t: string) => void) => boolean }
 const { avatar, narrator } = stage
 let working = false
+let askToken = 0                 // a newer question supersedes an older one that is still thinking or speaking
 let held = false, wasPlaying = false, wasAuto = false
 let snap: ReturnType<typeof avatar.holdSpeech> = null
 let prevCaption = { text: '', on: false }
@@ -36,7 +37,7 @@ export function initAsk(d: Deps) {
     if (wasPlaying) film.resume()
   }
   const open = () => { holdWorld(); box.classList.remove('hidden'); box.setAttribute('aria-hidden', 'false'); requestAnimationFrame(() => input.focus()) }
-  const close = () => { if (box.contains(document.activeElement)) (document.activeElement as HTMLElement).blur(); box.classList.add('hidden'); box.setAttribute('aria-hidden', 'true'); if (!working) releaseWorld() }
+  const close = () => { askToken++; stopAnswer(); working = false; hide(); releaseWorld() }
   const hide = () => { if (box.contains(document.activeElement)) (document.activeElement as HTMLElement).blur(); box.classList.add('hidden'); box.setAttribute('aria-hidden', 'true') }
   $('c-ask').addEventListener('click', () => (box.classList.contains('hidden') ? open() : close()))
   $('askbox-close').addEventListener('click', close)
@@ -48,24 +49,31 @@ export function initAsk(d: Deps) {
   })
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.classList.contains('hidden')) close(); if ((e.key === 'a' || e.key === 'A') && !e.metaKey && !e.ctrlKey && document.activeElement !== input && d.getState() !== 'BOOT' && d.getState() !== 'ENTER') { e.preventDefault(); open() } })
 
+  /** cut off whatever answer is being spoken right now (his voice, the browser voice, the jaw flap) */
+  function stopAnswer() { avatar.stop(); stopBrowserSpeech(); avatar.flapping = false }
+
   async function submit(q: string) {
-    if (working) return
-    working = true; input.value = ''; hide(); holdWorld()
+    const my = ++askToken                                                          // a question picked while another is being answered replaces it at once
+    if (working) stopAnswer()
+    working = true; input.value = ''; holdWorld()                                  // the panel stays open so another question can be picked
     log(`Ask: ${q.slice(0, 60)}`)
-    d.caption(`You: “${q}”`)
-    const slow = setTimeout(() => d.caption('Good question, one moment…'), 2500)
+    d.caption(`You: “${q}”`); avatar.setExpression('neutral')
+    const slow = setTimeout(() => { if (my === askToken) d.caption('Good question, one moment…') }, 2500)
     let a: Answer
     try { a = await askBrain(q) } finally { clearTimeout(slow) }
+    if (my !== askToken) return                                                    // superseded while thinking
     log(`Answer: ${a.source}`)
-    await deliver(a)
-    working = false
+    await deliver(a, my)
+    if (my !== askToken) return                                                    // superseded while speaking: the newer question owns the rest
+    working = false; hide()
     releaseWorld()                                                                 // back to exactly where we were (the answer never skips ahead in the story)
   }
 
-  async function deliver(a: Answer) {
+  async function deliver(a: Answer, my: number) {
+    if (my !== askToken) return
     d.caption(a.say); avatar.setExpression(a.mood); avatar.play(a.gesture)
     if (a.audio) await avatar.speakAudio(a.audio)
-    else { avatar.flapping = true; await speakBrowser(a.say); avatar.flapping = false }
+    else { avatar.flapping = true; await speakBrowser(a.say); if (my === askToken) avatar.flapping = false }
     if (a.audio?.startsWith('blob:')) URL.revokeObjectURL(a.audio)
   }
 }
