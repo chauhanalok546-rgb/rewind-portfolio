@@ -100,7 +100,7 @@ machine.root.position.set(-1.2, 0.42, 0.1); machine.root.rotation.y = 0.5
 scene.add(machine.root)
 
 /** Knobs the app turns: ring speed, glow flare (snap), chronometer glow, mote speed. */
-export const fx = { ringSpeed: 1, flare: 0, chrono: 0, motes: 1 }
+export const fx = { ringSpeed: 1, flare: 0, chrono: 0, motes: 1, warp: 0 }
 const chronoMats: THREE.MeshStandardMaterial[] = []
 let glowOpacity = 1
 let theme: Theme = 'cinematic'
@@ -231,6 +231,7 @@ addEventListener('pointermove', (e) => {
   avatar.setLookTarget(nx, ny); pointer.set(nx, ny)
 })
 
+let warped = false
 let prevT = performance.now()
 let elapsed = 0
 let frames = 0, fpsT = 0
@@ -253,6 +254,11 @@ function tick() {
   const par = closeUp ? 0.05 : 0.22
   const drift = reducedMotion ? 0 : 1
   camera.position.set(camNow.x + pointerNow.x * par * drift + Math.sin(t * 0.17) * 0.05 * drift, camNow.y + pointerNow.y * par * 0.4 * drift + Math.sin(t * 0.23) * 0.025 * drift, camNow.z + Math.sin(t * 0.13) * 0.06 * drift)
+  if (fx.warp > 0.001) {                                           // time-warp: the lens stretches and the camera shakes
+    const sh = fx.warp * 0.05
+    camera.position.x += (Math.random() - 0.5) * sh; camera.position.y += (Math.random() - 0.5) * sh
+    camera.fov = (innerWidth / innerHeight < 0.7 ? 38 : 28) + fx.warp * 22; camera.updateProjectionMatrix(); warped = true
+  } else if (warped) { camera.fov = innerWidth / innerHeight < 0.7 ? 38 : 28; camera.updateProjectionMatrix(); warped = false }
   camera.lookAt(lookNow)
   renderer.render(scene, camera)
   frames++; fpsT += dt

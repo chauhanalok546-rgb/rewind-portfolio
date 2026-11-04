@@ -32,14 +32,36 @@ export const sfx = {
     hum = { stop: () => { g.gain.setTargetAtTime(0, c.currentTime, 0.4); setTimeout(() => { o1.stop(); o2.stop() }, 1500); hum = null } }
   },
   stopHum() { hum?.stop() },
+  /** a finger snap: a sharp dry click, a hollow "pop" from the palm, and a short ring in the room */
   snap() {
     const c = ensure(); if (!master) return
-    const n = noise(c, 0.12), hp = c.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = 2800; hp.Q.value = 1.4
-    const g = c.createGain(); g.gain.setValueAtTime(0.9, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.09)
-    n.connect(hp); hp.connect(g); g.connect(master); n.start()
-    const o = c.createOscillator(); o.frequency.setValueAtTime(220, c.currentTime); o.frequency.exponentialRampToValueAtTime(70, c.currentTime + 0.05)
-    const og = c.createGain(); og.gain.setValueAtTime(0.5, c.currentTime); og.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.06)
-    o.connect(og); og.connect(master); o.start(); o.stop(c.currentTime + 0.08)
+    const t0 = c.currentTime
+    const click = noise(c, 0.05), hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3200
+    const cg = c.createGain(); cg.gain.setValueAtTime(1.2, t0); cg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.028)
+    click.connect(hp); hp.connect(cg); cg.connect(master); click.start(t0)
+    const pop = c.createOscillator(); pop.type = 'triangle'; pop.frequency.setValueAtTime(900, t0); pop.frequency.exponentialRampToValueAtTime(260, t0 + 0.07)
+    const pf = c.createBiquadFilter(); pf.type = 'bandpass'; pf.frequency.value = 1100; pf.Q.value = 3
+    const pg = c.createGain(); pg.gain.setValueAtTime(0.9, t0); pg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09)
+    pop.connect(pf); pf.connect(pg); pg.connect(master); pop.start(t0); pop.stop(t0 + 0.1)
+    const body = noise(c, 0.2), bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 6
+    const bg = c.createGain(); bg.gain.setValueAtTime(0.35, t0 + 0.004); bg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2)
+    body.connect(bp); bp.connect(bg); bg.connect(master); body.start(t0)
+  },
+  /** the time-warp: a rising riser into a deep impact; `lead` seconds of build-up, then the boom */
+  warp(lead = 1.2) {
+    const c = ensure(); if (!master) return
+    const t0 = c.currentTime
+    const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(70, t0); o.frequency.exponentialRampToValueAtTime(900, t0 + lead)
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(300, t0); lp.frequency.exponentialRampToValueAtTime(6000, t0 + lead)
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.22, t0 + lead); g.gain.exponentialRampToValueAtTime(0.0001, t0 + lead + 0.25)
+    o.connect(lp); lp.connect(g); g.connect(master); o.start(t0); o.stop(t0 + lead + 0.3)
+    const sw = noise(c, lead + 0.3), bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.2; bp.frequency.setValueAtTime(400, t0); bp.frequency.exponentialRampToValueAtTime(7000, t0 + lead)
+    const sg = c.createGain(); sg.gain.setValueAtTime(0.0001, t0); sg.gain.exponentialRampToValueAtTime(0.4, t0 + lead); sg.gain.exponentialRampToValueAtTime(0.0001, t0 + lead + 0.3)
+    sw.connect(bp); bp.connect(sg); sg.connect(master); sw.start(t0)
+    const t1 = t0 + lead                                           // impact
+    const k = c.createOscillator(); k.type = 'sine'; k.frequency.setValueAtTime(120, t1); k.frequency.exponentialRampToValueAtTime(34, t1 + 0.6)
+    const kg = c.createGain(); kg.gain.setValueAtTime(0.0001, t1); kg.gain.exponentialRampToValueAtTime(0.9, t1 + 0.01); kg.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.9)
+    k.connect(kg); kg.connect(master); k.start(t1); k.stop(t1 + 1)
   },
   whoosh(seconds = 1.4) {
     const c = ensure(); if (!master) return

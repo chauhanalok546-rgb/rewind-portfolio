@@ -4,7 +4,7 @@ import { stage } from '../stage'
 import { sfx } from '../audio/sfx'
 import { music, type Mood } from '../audio/music'
 import { tunnel } from './tunnel'
-import { $, animateYear, log, reduced, setPlace, setSignal, setStatus, setYearInstant } from '../app/hud'
+import { $, animateYear, log, reduced, setPlace, setSignal, setStatus, setYearInstant, shockwave } from '../app/hud'
 
 /** The film: ONE GSAP master timeline with a label per scene (scene0 .. scene6), so buttons and keys can jump, pause, skip and replay.
  *  Narration lines are fixed to the timeline (call at each line's start); each scene builds its own visuals on enter. */
@@ -87,6 +87,7 @@ function enterScene(i: number) {
   void animateYear(def.year, reduced ? 0 : 600)
   setPlace(def.place); setSignal(i === 0 ? '12%' : i === 5 ? '88%' : '100%')
   setStatus('Playing')
+  gsap.to(stage.fx, { warp: 0, duration: 0.7 })
   music.play(def.music)
   stage.setAmbience(def.id === 'scene0' || def.id === 'scene6' ? 'lobby' : def.id)
   tunnel.stop(900)
@@ -98,7 +99,16 @@ function enterScene(i: number) {
 async function travel(from: number, to: number) {
   setStatus('Travelling', true)
   log(`Destination locked: ${SCENES[to].year}`)
-  tunnel.start(500); sfx.whoosh(2.2); stage.fx.ringSpeed = 5
+  if (avatar.root.visible && !reduced) {                  // every jump in time starts with a snap of his fingers
+    await new Promise<void>((resolve) => {
+      const done = setTimeout(resolve, 1400)
+      avatar.onEvent = (name) => { if (name === 'snap') { avatar.onEvent = undefined; clearTimeout(done); resolve() } }
+      avatar.play('snap')
+    })
+    sfx.snap(); shockwave(); stage.fx.flare = 1; gsap.to(stage.fx, { flare: 0, duration: 1.4 })
+  }
+  tunnel.start(500); sfx.warp(1.0); sfx.whoosh(1.6); stage.fx.ringSpeed = 5
+  gsap.to(stage.fx, { warp: 0.8, duration: 1.0, ease: 'power2.in' })
   disposeScene()
   void animateYear(SCENES[to].year, reduced ? 0 : 1800)
   if (SCENES[from].avatar !== 'lobby' || from === 0) await stage.teleport('out', 1200)

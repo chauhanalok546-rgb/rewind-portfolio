@@ -53,3 +53,10 @@ export async function whiteFlash(atPeak: () => void | Promise<void>) {
   await wait(300); await atPeak()
   await a.finished.catch(() => undefined)
 }
+
+/** Rings of light spreading from the avatar when the finger snap lands (the time-travel trigger). */
+export function shockwave() {
+  if (reduced) return
+  const box = document.createElement('div'); box.className = 'shock'; box.innerHTML = '<i></i><i></i><i></i>'
+  document.body.appendChild(box); setTimeout(() => box.remove(), 1800)
+}

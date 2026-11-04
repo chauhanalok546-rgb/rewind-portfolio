@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 import { fx, loadStage, stage, type Theme } from '../stage'
 import { film } from '../film/film'
-import { $, decay, hide, log, reduced, setStatus, show, wait, whiteFlash } from './hud'
+import { $, decay, hide, log, reduced, setStatus, shockwave, show, wait, whiteFlash } from './hud'
+import { tunnel } from '../film/tunnel'
+import gsap from 'gsap'
 import { sfx } from '../audio/sfx'
 import { mountStickers, toast } from '../ui/stickers'
 import { startPresence, type Presence } from '../sense/presence'
@@ -194,14 +196,17 @@ async function transition() {
     avatar.play('snap')
   })
   await snapped                                    // fingers slip: crisp snap
-  sfx.snap(); avatar.blinkNow(0.5)                 // slow blink
+  sfx.snap(); avatar.blinkNow(0.5); shockwave()      // the snap: a crisp click and rings of light from him
   fx.flare = 1; fx.chrono = 1; decay('chrono', 2600)  // chronometer flares, rings flare
   fx.ringSpeed = 5; fx.motes = 4
-  await wait(reduced ? 80 : 260)
+  await wait(reduced ? 80 : 520)                     // a beat to let the snap land ...
 
-  sfx.whoosh(1.4)
+  sfx.warp(1.3); tunnel.start(500)                   // ... then the time-warp: riser, streaks, the lens stretches
+  if (!reduced) gsap.to(fx, { warp: 1, duration: 1.3, ease: 'power2.in' })
+  await wait(reduced ? 200 : 1300)
   await whiteFlash(async () => {                    // at the flash peak the scene swaps behind the light
     sfx.stopHum(); hide('ask', 10); film.begin(0)         // the film starts behind the fading light
+    gsap.to(fx, { warp: 0, duration: 0.9, ease: 'power3.out' })
   })
   decay('flare', 1600)
   fx.ringSpeed = 1; fx.motes = 1
