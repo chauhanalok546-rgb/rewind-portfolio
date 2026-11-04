@@ -17,6 +17,8 @@ export interface SceneCtx {
   music(m: Mood): void
   type(el: HTMLElement, text: string, start: number, dur: number): void
   banner(text: string, sub?: string): void
+  /** run when the scene is torn down (a jump, travel or replay): used to put the 3D props away */
+  onDispose(fn: () => void): void
 }
 export interface SceneDef {
   id: string; year: number; place: string
@@ -73,27 +75,19 @@ const scene1: SceneDef = {
     backdrop(set, 'scene1')
     c.tl.fromTo(set, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.2 }, 0)
     c.banner('Uttarkashi', '2015')
-    // chess: grandfather's lesson, the pawn advances by itself after 3 s (or when pushed)
-    const board = c.add<HTMLElement>(card('right chess', `<div class="eyebrow mono">first lesson: think before you move</div><div class="board"></div><div class="tap mono">push the pawn</div>`))
-    const b = board.querySelector('.board') as HTMLElement
-    const back = ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜']
-    for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
-      const sq = h(`<i class="${(r + f) % 2 ? 'dk' : 'lt'}"></i>`, b)
-      const piece = r === 0 ? back[f] : r === 1 ? '♟' : r === 6 ? '♙' : r === 7 ? ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖'][f] : ''
-      if (piece) { sq.textContent = piece; sq.classList.add(r < 2 ? 'blk' : 'wht') }
-      if (r === 6 && f === 4) sq.id = 'hero-pawn'
-    }
-    let moved = false
+    // chess: a real 3D board; the white e-pawn moves two squares by itself after a few seconds, or when the visitor clicks the board
+    const chess = stage.props.chess
+    const label = c.add<HTMLElement>(`<div class="prop chess3d mono"><div class="eyebrow">first lesson: think before you move</div><div class="tap">click the board to push the pawn</div></div>`)
+    gsap.set(label, { autoAlpha: 0 })
     const advance = () => {
-      if (moved) return; moved = true
-      const pawn = b.querySelector('#hero-pawn') as HTMLElement; const idx = 6 * 8 + 4, target = b.children[idx - 16] as HTMLElement
-      const dy = target.getBoundingClientRect().top - pawn.getBoundingClientRect().top
-      gsap.to(pawn, { y: dy, duration: 0.8, ease: 'power3.inOut', onComplete: () => { target.textContent = '♙'; target.classList.add('wht'); pawn.textContent = ''; gsap.set(pawn, { y: 0 }); c.word('curious') } })
-      ;(board.querySelector('.tap') as HTMLElement).style.display = 'none'
+      if (chess.moved) return
+      void chess.push().then(() => c.word('curious')); const tap = label.querySelector('.tap') as HTMLElement | null; if (tap) tap.style.display = 'none'
     }
-    b.addEventListener('click', advance)
-    pop(c, board, c.at(1, 0.8), c.at(2, 0.2))
-    c.tl.call(advance, [], c.at(1, 4.2))
+    chess.onPick = advance
+    c.tl.call(() => { chess.show(true); gsap.to(label, { autoAlpha: 1, duration: 0.6 }) }, [], c.at(1, 0.8))
+    c.tl.call(advance, [], c.at(1, 4.6))
+    c.tl.call(() => { chess.show(false); chess.onPick = null; gsap.to(label, { autoAlpha: 0, duration: 0.4 }) }, [], c.at(2, 0.2))
+    c.onDispose(() => { chess.show(false); chess.onPick = null })
     // puzzles and olympiads
     const puzzle = c.add<HTMLElement>(card('right', `<div class="eyebrow mono">newspaper · puzzle corner</div><div class="sudoku">${'<i></i>'.repeat(16)}</div><div class="sheets mono">olympiad sheets ✎</div>`))
     const cells = puzzle.querySelectorAll('.sudoku i')
@@ -129,8 +123,11 @@ const scene2: SceneDef = {
     const board = c.add<HTMLElement>(card('right result', `<div class="eyebrow mono">result board</div><h3>Class X</h3><div class="big">93%</div>`))
     pop(c, board, c.at(2, 0.4), c.at(3, 0.2))
     // beat 4: snow and ropes
-    const snow = c.add<HTMLElement>(`<div class="set" style="background:${sky(['#c9dcf2', '#e9f2fb', '#ffffff'])}">${mountains(['#dbe7f5', '#b3c9e4', '#7f9ec9', '#4d6fa0'], true)}<svg class="rope" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M70 0 C 60 30, 40 45, 46 70 S 30 95, 36 100" fill="none" stroke="#ffb020" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="3 1.6"/></svg><div class="flakes"></div></div>`, 'sets')
+    const snow = c.add<HTMLElement>(`<div class="set" style="background:${sky(['#c9dcf2', '#e9f2fb', '#ffffff'])}"><div class="flakes"></div></div>`, 'sets')
     c.tl.fromTo(snow, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.4 }, c.at(3, 0))
+    const peaks = stage.props.mountains                                                    // real 3D peaks, a rope route and a climber's light
+    c.tl.call(() => { peaks.show(true); peaks.climb(11) }, [], c.at(3, 0.3))
+    c.onDispose(() => peaks.show(false))
     const note = c.add<HTMLElement>(card('right', `<div class="eyebrow mono">ARM-01</div><h3>❄ Not built for snow.</h3>`))
     pop(c, note, c.at(3, 0.3), c.at(4, 0.2))
     const nim = c.add<HTMLElement>(card('right', `<div class="eyebrow mono">basic mountaineering course</div><h3>Nehru Institute of Mountaineering</h3><div class="big">14 days</div>`))
@@ -150,21 +147,19 @@ const scene3: SceneDef = {
     c.banner('Dehradun', 'Asian School · Classes 11 and 12')
     const dorm = c.add<HTMLElement>(card('right', `<div class="eyebrow mono">new city · new hostel</div><h3>Same habits.</h3><div class="mono dim">a chessboard on the desk ♟</div>`))
     pop(c, dorm, c.at(0, 4.2), c.at(1, 0.2))
-    // basketball: one shot by itself after 3 s, or take it yourself
-    const court = c.add<HTMLElement>(card('right court', `<div class="eyebrow mono">power forward · center</div>
-      <svg viewBox="0 0 300 200"><rect x="2" y="2" width="296" height="196" rx="14" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="3"/><path d="M2 150h296" stroke="currentColor" stroke-opacity=".25"/>
-      <rect x="226" y="40" width="6" height="52" fill="currentColor" opacity=".7"/><rect x="190" y="70" width="38" height="4" fill="#ffb020"/><path d="M190 74l8 24h20l8-24" fill="none" stroke="#f5f8fc" stroke-width="2"/>
-      <circle id="ball" cx="52" cy="150" r="11" fill="#ffb020" stroke="#0e1726" stroke-width="2"/></svg><div class="tap mono">take the shot</div>`))
-    const ball = court.querySelector('#ball') as SVGElement
-    let shot = false
+    // basketball: a real 3D court and hoop; one shot goes up by itself after a few seconds, or the visitor clicks the court to take it
+    const court = stage.props.court
+    const tapHint = c.add<HTMLElement>(`<div class="prop chess3d mono"><div class="eyebrow">power forward · center</div><div class="tap">click the court to take the shot</div></div>`)
+    gsap.set(tapHint, { autoAlpha: 0 })
     const shoot = () => {
-      if (shot) return; shot = true; (court.querySelector('.tap') as HTMLElement).style.display = 'none'
-      const o = { t: 0 }
-      gsap.to(o, { t: 1, duration: 1.3, ease: 'none', onUpdate: () => { const t = o.t; ball.setAttribute('cx', String(52 + (206 - 52) * t)); ball.setAttribute('cy', String(150 - 140 * 4 * t * (1 - t) - 52 * t * t)) }, onComplete: () => { gsap.to(ball, { attr: { cy: 190 }, duration: 0.45, ease: 'power2.in' }); c.word('resilient') } })
+      if (court.shot) return
+      void court.shoot().then(() => c.word('resilient')); const tap = tapHint.querySelector('.tap') as HTMLElement | null; if (tap) tap.style.display = 'none'
     }
-    court.addEventListener('click', shoot)
-    pop(c, court, c.at(1, 0.6), c.at(2, 0.1))
-    c.tl.call(shoot, [], c.at(1, 3.8))
+    court.onPick = shoot
+    c.tl.call(() => { court.show(true); gsap.to(tapHint, { autoAlpha: 1, duration: 0.6 }) }, [], c.at(1, 0.6))
+    c.tl.call(shoot, [], c.at(1, 4.2))
+    c.tl.call(() => { court.show(false); court.onPick = null; gsap.to(tapHint, { autoAlpha: 0, duration: 0.4 }) }, [], c.at(2, 0.1))
+    c.onDispose(() => { court.show(false); court.onPick = null })
     const score = c.add<HTMLElement>(card('right', `<div class="eyebrow mono">scoreboard</div><h3>CBSE cluster final: won</h3><div class="banner">CBSE Nationals</div>`))
     pop(c, score, c.at(1, 7), c.at(2, 0.1))
     const xii = c.add<HTMLElement>(card('right result', `<div class="eyebrow mono">result board</div><h3>Class XII</h3><div class="big">90%</div>`))

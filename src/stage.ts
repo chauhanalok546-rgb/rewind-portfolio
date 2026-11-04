@@ -13,6 +13,7 @@ import { createMachine } from './machine'
 import { createHovercar } from './hovercar'
 import { createEngine } from './engine'
 import { createDog } from './dog'
+import { createProps } from './props3d'
 
 export type Theme = 'cinematic' | 'lab'
 
@@ -110,6 +111,9 @@ scene.add(machine.root)
 const dog = createDog()
 scene.add(dog.root)
 let dogSide = -0.78, dogDepth = 0.06
+// 3D story props (chessboard, mountains, basketball court): hidden until their beat
+const props = createProps()
+props.roots.forEach((r) => scene.add(r))
 // the Chrono Engine: a large machine at the back of the lab
 const engine = createEngine()
 engine.root.position.set(0.1, -0.2, -5.4); engine.root.scale.setScalar(0.9)
@@ -278,7 +282,7 @@ function resize() {
     const th = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
     camBase.set(0, a < 1 ? 1.3 : 1.15, Math.max(4.4, SPAN / (th * a))); lookBase.set(0, a < 1 ? 1.35 : 1.05, 0)
   }
-  baseFov = camera.fov
+  baseFov = camera.fov; props.layout(a)
   camBase.z *= userZoom; camBase.y *= 0.5 + 0.5 * userZoom; lookBase.y *= 0.5 + 0.5 * userZoom
   if (w / h < 0.75) { robot.root.position.set(0.78, 1.0, -0.3); robot.root.scale.setScalar(0.4); machine.root.position.set(-0.8, 0.95, -0.3); machine.root.userData.s = 0.4; engine.root.position.set(0, 0.7, -6.5); engine.root.scale.setScalar(0.9) } else { robot.root.position.set(1.1, 0.42, 0.2); robot.root.scale.setScalar(0.9); machine.root.position.set(-1.2, 0.42, 0.1); machine.root.userData.s = 0.9; engine.root.position.set(0.1, -0.2, -5.4); engine.root.scale.setScalar(0.9) }   // portrait: the arm floats higher and smaller so the control bar does not hide it
   if (!closeUp) { camPos.copy(camBase); camLook.copy(lookBase) }
@@ -304,6 +308,7 @@ function tick() {
   avatar.update(dt)
   dog.update(dt, t, { x: avatar.root.position.x, z: avatar.root.position.z, yaw: avatar.root.rotation.y, visible: avatar.root.visible && !closeUp, speaking: avatar.isSpeaking(), side: dogSide, depth: dogDepth })
   robot.update(dt)
+  props.update(dt, t)
   machine.update(dt, t)
   engine.update(dt, t)
   hovercar.update(dt)
@@ -346,14 +351,14 @@ export async function loadStage(onProgress: (f: number) => void) {
   // warm-up: switch the dissolve's clipping on now (it recompiles every avatar shader, a 150 ms hitch the first time he teleports) and compile
   // everything that appears later (machine, hover-car, particles) while the loading screen is still up
   applyClip(); setClip(5)
-  const hidden = [machine.root, hovercar.root, engine.root, robot.root, dog.root].filter((o) => !o.visible)
+  const hidden = [machine.root, hovercar.root, engine.root, robot.root, dog.root, ...props.roots].filter((o) => !o.visible)
   hidden.forEach((o) => { o.visible = true })
   try { renderer.compile(scene, camera) } catch { /* the first real frame will compile instead */ }
   hidden.forEach((o) => { o.visible = false })
 }
 tick()
 
-export const stage = { setCinematic, isCinematic, setZoom, getZoom, avatar, narrator, dog, robot, machine, hovercar, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
+export const stage = { props, pickProp: (x: number, y: number) => props.pick(x, y, camera), setCinematic, isCinematic, setZoom, getZoom, avatar, narrator, dog, robot, machine, hovercar, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
 ;(window as unknown as Record<string, unknown>).__stage = stage
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
 ;(window as unknown as Record<string, unknown>).__narrator = narrator

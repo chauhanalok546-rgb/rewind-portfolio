@@ -326,6 +326,7 @@ function wireControls() {
   addEventListener('pointermove', (e) => { const r = document.documentElement.style; r.setProperty('--px', String((e.clientX / innerWidth) * 2 - 1)); r.setProperty('--py', String((e.clientY / innerHeight) * 2 - 1)) })
   let lastPoke = 0
   $('stage').addEventListener('click', (e) => {
+    if (stage.pickProp(e.clientX, e.clientY)) return                       // the chessboard or the court was clicked: it reacts by itself
     const now = performance.now(); if (now - lastPoke < 2500 || narrator.playing) return
     const nx = (e.clientX / innerWidth) * 2 - 1, ny = (e.clientY / innerHeight) * 2 - 1
     if (Math.abs(nx) < 0.22 && ny > -0.6 && ny < 0.75) {

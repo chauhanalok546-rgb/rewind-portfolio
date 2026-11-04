@@ -15,7 +15,7 @@ gsap.ticker.lagSmoothing(0)       // keep the timeline in real time, in step wit
 
 let master: gsap.core.Timeline | null = null
 let current = -1
-let live: { els: HTMLElement[]; tl: gsap.core.Timeline } | null = null
+let live: { els: HTMLElement[]; tl: gsap.core.Timeline; cleanups: Array<() => void> } | null = null
 let paused = false
 let ended = false
 const traits: string[] = []
@@ -47,8 +47,8 @@ function banner(text: string, sub = '') {
 /* ---------- scene lifecycle ---------- */
 function disposeScene() {
   if (!live) return
-  const { els, tl } = live; live = null
-  tl.kill()
+  const { els, tl, cleanups } = live; live = null
+  tl.kill(); for (const fn of cleanups) { try { fn() } catch { /* nothing to put away */ } }
   for (const e of els) { gsap.killTweensOf(e); gsap.to(e, { autoAlpha: 0, duration: 0.5, onComplete: () => e.remove() }) }
 }
 
@@ -70,7 +70,8 @@ function enterScene(i: number) {
   prefetch(i); prefetch(i + 1); prefetch(i + 2)
   const els: HTMLElement[] = []
   const tl = gsap.timeline()
-  live = { els, tl }
+  const cleanups: Array<() => void> = []
+  live = { els, tl, cleanups }
   const ctx: SceneCtx = {
     id: def.id, sets: $('sets'), props: $('props'), tl,
     at: (line, off = 0) => lineOffset(def, line) + off,
@@ -84,6 +85,7 @@ function enterScene(i: number) {
       tl.to(o, { n: text.length, duration: reduced ? 0.01 : d, ease: 'none', onUpdate: () => { el.textContent = pre + text.slice(0, Math.round(o.n)) } }, start)
     },
     banner,
+    onDispose(fn) { cleanups.push(fn) },
   }
   // where the avatar stands
   avatar.setAutonomous(def.avatar === 'lobby')

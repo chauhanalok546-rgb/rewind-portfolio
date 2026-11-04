@@ -23,6 +23,8 @@ MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_multilingual_v2")
 if not KEY: sys.exit("No key found: put ELEVENLABS_API_KEY=... in rewind/.env.local (or the environment).")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANSWERS = "--answers" in sys.argv
+ONLY = [a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--only=")]
+ONLY = ONLY[0] if ONLY else None          # --only=s1_2,s3_1 regenerates just those narration lines (saves the free quota)
 LISTEN = "--listen" in sys.argv
 OUT = os.path.join(ROOT, "public/audio/listen" if LISTEN else "public/audio/answers" if ANSWERS else "public/audio/narration")
 CLEAN = "highpass=f=70,silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.05,areverse,silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.12,areverse,loudnorm=I=-16:TP=-1.5:LRA=11,adelay=70|70,apad=pad_dur=0.1"
@@ -65,6 +67,6 @@ elif ANSWERS:
 else:
     p = os.path.join(OUT, "script.json"); d = json.load(open(p))
     for l in d["lines"]:
-        if l["speaker"] == "ALOK": l["duration"] = render(l["id"], l["text"])
+        if l["speaker"] == "ALOK" and (not ONLY or l["id"] in ONLY): l["duration"] = render(l["id"], l["text"])
     d["voice"]["ALOK"] = f"ElevenLabs voice {VOICE}"; json.dump(d, open(p, "w"), indent=1, ensure_ascii=False)
 print("done")
