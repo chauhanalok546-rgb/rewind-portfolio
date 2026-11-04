@@ -1,5 +1,5 @@
 {
- "voice": "en-IN-PrabhatNeural",
+ "voice": "ElevenLabs TX3LPaxmHKxFdv7VOQHJ",
  "answers": [
   {
    "id": "about",
@@ -15,7 +15,7 @@
    "gesture": "present",
    "mood": "happy",
    "jumpTo": null,
-   "duration": 19.38
+   "duration": 17.95
   },
   {
    "id": "wispr",
@@ -31,7 +31,7 @@
    "gesture": "talk1",
    "mood": "happy",
    "jumpTo": "scene5",
-   "duration": 14.09
+   "duration": 11.99
   },
   {
    "id": "setback",
@@ -48,7 +48,7 @@
    "gesture": "talk2",
    "mood": "serious",
    "jumpTo": "scene3",
-   "duration": 16.87
+   "duration": 14.55
   },
   {
    "id": "proud",
@@ -63,7 +63,7 @@
    "gesture": "present",
    "mood": "proud",
    "jumpTo": "scene4",
-   "duration": 18.71
+   "duration": 17.43
   },
   {
    "id": "bugslayer",
@@ -78,7 +78,7 @@
    "gesture": "talk1",
    "mood": "neutral",
    "jumpTo": "scene4",
-   "duration": 15.16
+   "duration": 14.75
   },
   {
    "id": "skills",
@@ -95,7 +95,7 @@
    "gesture": "talk2",
    "mood": "neutral",
    "jumpTo": "scene4",
-   "duration": 12.86
+   "duration": 11.13
   },
   {
    "id": "pressure",
@@ -110,7 +110,7 @@
    "gesture": "talk1",
    "mood": "neutral",
    "jumpTo": null,
-   "duration": 13.36
+   "duration": 11.3
   },
   {
    "id": "team",
@@ -126,7 +126,7 @@
    "gesture": "talk2",
    "mood": "happy",
    "jumpTo": "scene4",
-   "duration": 14.85
+   "duration": 13.22
   },
   {
    "id": "learning",
@@ -141,7 +141,7 @@
    "gesture": "talk1",
    "mood": "neutral",
    "jumpTo": "scene5",
-   "duration": 14.48
+   "duration": 13.16
   },
   {
    "id": "product",
@@ -157,7 +157,7 @@
    "gesture": "present",
    "mood": "happy",
    "jumpTo": "scene5",
-   "duration": 13.66
+   "duration": 11.35
   },
   {
    "id": "pick",
@@ -173,7 +173,7 @@
    "gesture": "present",
    "mood": "proud",
    "jumpTo": null,
-   "duration": 14.45
+   "duration": 12.83
   },
   {
    "id": "outside",
@@ -191,7 +191,7 @@
    "gesture": "talk2",
    "mood": "happy",
    "jumpTo": "scene3",
-   "duration": 15.19
+   "duration": 14.56
   },
   {
    "id": "real",
@@ -207,7 +207,7 @@
    "gesture": "talk1",
    "mood": "happy",
    "jumpTo": null,
-   "duration": 11.64
+   "duration": 8.95
   },
   {
    "id": "contact",
@@ -224,7 +224,7 @@
    "gesture": "point",
    "mood": "happy",
    "jumpTo": "scene6",
-   "duration": 12.15
+   "duration": 9.92
   },
   {
    "id": "chess",
@@ -239,7 +239,7 @@
    "gesture": "talk1",
    "mood": "happy",
    "jumpTo": "scene1",
-   "duration": 12.12
+   "duration": 10.44
   }
  ]
 }
