@@ -188,7 +188,7 @@ function createCourt() {
       })
     },
     get shot() { return state.shot },
-    layout(portrait: boolean) { root.position.set(portrait ? -0.1 : 1.05, portrait ? 2.6 : 0.95, portrait ? -0.2 : 0.2); root.userData.base = root.position.y; stage_.scale.setScalar(portrait ? 0.58 : 1) },
+    layout(portrait: boolean) { root.position.set(portrait ? -0.1 : 0.8, portrait ? 2.6 : 1.1, portrait ? -0.2 : 0.2); root.userData.base = root.position.y; stage_.scale.setScalar(portrait ? 0.58 : 0.6) },
     update(_dt: number, t: number) { if (!root.visible) return; root.position.y = root.userData.base + Math.sin(t * 0.9 + 1) * 0.015; buildNet(state.sway * 0.05 * Math.sin(t * 40)) },
   }
 }
