@@ -75,20 +75,26 @@ def remove_pockets():
 remove_pockets()
 
 # ---------------------------------------------------------------- 2. slimmer build (body, clothes; shape keys moved the same way)
-SHOULDER_IN=0.05
+SHOULDER_IN=0.03
 def slim(co):
-    """a lean build: narrower chest and shoulders, thinner neck, arms and legs (the photos show a slim, light frame)"""
+    """a healthy medium build: a bit slimmer than the stock body, but with real shoulders, a fuller chest and a little weight"""
     x,y,z=co[:,0],co[:,1],co[:,2]; ax=np.abs(x)
-    torso=(1-sstep(0.17,0.38,ax))*sstep(0.95,1.08,z)*(1-sstep(1.50,1.57,z))     # chest, ribs and shoulders, fading out into the arms and the head
+    torso=(1-sstep(0.17,0.38,ax))*sstep(0.95,1.08,z)*(1-sstep(1.50,1.57,z))
     neck=(1-sstep(0.05,0.09,ax))*sstep(1.50,1.54,z)*(1-sstep(1.56,1.595,z))
     leg=sstep(0.12,0.30,z)*(1-sstep(0.92,1.06,z))
     arm=sstep(0.20,0.40,ax)*sstep(1.26,1.40,z)*(1-sstep(1.68,1.80,z))
     cx=np.sign(x)*0.086
-    nx=x*(1-0.16*torso-0.05*neck); ny=y*(1-0.11*torso-0.05*neck)
-    nx=nx+((cx+(x-cx)*0.88)-x)*leg; ny=ny+((-0.01+(y+0.01)*0.88)-y)*leg
-    ny=ny*(1-0.15*arm); nz=z+((1.5+(z-1.5)*0.85)-z)*arm
-    sh=sstep(0.10,0.22,ax)*sstep(1.22,1.38,z)*(1-sstep(1.62,1.72,z))                  # narrower shoulders: the arms and the deltoids move in
+    nx=x*(1-0.09*torso-0.03*neck); ny=y*(1-0.05*torso-0.03*neck)
+    nx=nx+((cx+(x-cx)*0.93)-x)*leg; ny=ny+((-0.01+(y+0.01)*0.93)-y)*leg
+    ny=ny*(1-0.08*arm); nz=z+((1.5+(z-1.5)*0.92)-z)*arm
+    sh=sstep(0.10,0.22,ax)*sstep(1.22,1.38,z)*(1-sstep(1.62,1.72,z))
     nx=nx-np.sign(x)*SHOULDER_IN*sh
+    # chest muscle: two soft pectoral swells on the front, and a touch of weight around the waist
+    front=(y<0.02).astype(np.float64)
+    pec=np.exp(-((ax-0.075)/0.060)**2-((z-1.385)/0.060)**2)*front
+    belly=np.exp(-((x/0.13)**2)-((z-1.14)/0.085)**2)*front
+    ny=ny-0.016*pec-0.010*belly
+    nx=nx+np.sign(x)*0.006*pec
     return np.stack([nx,ny,nz],1)
 
 def apply_to_mesh(o, fn):
@@ -196,6 +202,21 @@ blend((1-sstep(0.004,0.0085,np.hypot((AX-0.0095)/1.0,(Z-1.6715)/0.55)))*0.5,(0.2
 blend((1-sstep(0.002,0.006,np.abs(Z-1.6745)))*(1-sstep(0.026,0.036,AX))*0.20,(0.20,0.15,0.14))
 blend((1-sstep(0.0012,0.0035,np.abs(Z-MOUTH_Z)))*(1-sstep(0.02,0.026,AX))*0.55,(0.26,0.10,0.10))
 img.pixels=px.ravel().tolist(); img.pack()
+
+# ---------------------------------------------------------------- 5a. hair: waves and frizz (displaces the strand geometry, stronger toward the tips)
+def wavy(co):
+    c=np.array([0.0,0.025,1.70]); r=co-c; d=np.linalg.norm(r,axis=1)+1e-6
+    t=sstep(0.085,0.165,d)                                           # the roots stay put, the tips move most
+    ang=np.arctan2(r[:,1],r[:,0]); rad=r/d[:,None]
+    tan=np.stack([-rad[:,1],rad[:,0],np.zeros_like(d)],1); tan/=(np.linalg.norm(tan,axis=1,keepdims=True)+1e-6)
+    wave=np.sin(co[:,2]*105+ang*4.0)*0.0125*t                        # slow S-waves
+    curl=np.sin(co[:,2]*190+ang*7.0+1.7)*0.0055*t                    # tighter ripple on top
+    h=np.sin(co[:,0]*127.1+co[:,1]*311.7+co[:,2]*74.7)*43758.5453; jit=(h-np.floor(h))-0.5
+    h2=np.sin(co[:,0]*269.5+co[:,1]*183.3+co[:,2]*246.1)*43758.5453; jit2=(h2-np.floor(h2))-0.5
+    out=co+tan*wave[:,None]+rad*curl[:,None]
+    out[:,0]+=jit*0.0050*t; out[:,1]+=jit2*0.0050*t; out[:,2]+=(jit-jit2)*0.0020*t   # frizz: fine random flyaways
+    return out
+for n in ('avaturn_hair_0','avaturn_hair_1'): apply_to_mesh(O[n], wavy)
 
 # ---------------------------------------------------------------- 5. hair: black
 for name in ('Image_3',):
