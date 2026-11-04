@@ -214,6 +214,7 @@ function resize() {
   camera.fov = w / h < 0.7 ? 38 : 28
   // portrait phones: pull back and look higher so the avatar sits in the lower part of the screen (cards go above him)
   if (w / h < 1.0) { camBase.set(0, 1.25, 5.3); lookBase.set(0, 1.62, 0) } else { camBase.set(0, 1.05, 4.4); lookBase.set(0, 0.95, 0) }
+  if (w / h < 1.0) { robot.root.position.set(0.82, 1.0, 0.1); robot.root.scale.setScalar(0.6) } else { robot.root.position.set(1.1, 0.42, 0.2); robot.root.scale.setScalar(0.9) }   // portrait: the arm floats higher and smaller so the control bar does not hide it
   if (!closeUp) { camPos.copy(camBase); camLook.copy(lookBase) }
   camera.updateProjectionMatrix()
   moteMat.uniforms.uScale.value = (h * dpr) / 900
