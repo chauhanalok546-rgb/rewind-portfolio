@@ -75,6 +75,7 @@ def remove_pockets():
 remove_pockets()
 
 # ---------------------------------------------------------------- 2. slimmer build (body, clothes; shape keys moved the same way)
+SHOULDER_IN=0.05
 def slim(co):
     """a lean build: narrower chest and shoulders, thinner neck, arms and legs (the photos show a slim, light frame)"""
     x,y,z=co[:,0],co[:,1],co[:,2]; ax=np.abs(x)
@@ -86,6 +87,8 @@ def slim(co):
     nx=x*(1-0.16*torso-0.05*neck); ny=y*(1-0.11*torso-0.05*neck)
     nx=nx+((cx+(x-cx)*0.88)-x)*leg; ny=ny+((-0.01+(y+0.01)*0.88)-y)*leg
     ny=ny*(1-0.15*arm); nz=z+((1.5+(z-1.5)*0.85)-z)*arm
+    sh=sstep(0.10,0.22,ax)*sstep(1.22,1.38,z)*(1-sstep(1.62,1.72,z))                  # narrower shoulders: the arms and the deltoids move in
+    nx=nx-np.sign(x)*SHOULDER_IN*sh
     return np.stack([nx,ny,nz],1)
 
 def apply_to_mesh(o, fn):
@@ -125,6 +128,15 @@ apply_to_mesh(body, lambda c: slim(define_face(c)))
 apply_to_mesh(look, slim)
 for n in ('ChronoBand','ChronoCase','ChronoDisplay','CordBracelet','SilverRing','SleevePatch'):      # the wrist pieces follow the thinner arms
     if n in O: apply_to_mesh(O[n], slim)
+
+# the arm bones follow the same mapping, so the shoulders still pivot where the mesh now is
+arm_obj=O['Armature']; bpy.context.view_layer.objects.active=arm_obj
+bpy.ops.object.mode_set(mode='EDIT')
+for eb in arm_obj.data.edit_bones:
+    if eb.name.startswith(('LeftShoulder','LeftArm','LeftForeArm','LeftHand','RightShoulder','RightArm','RightForeArm','RightHand')):
+        h=slim(np.array([list(eb.head)],dtype=np.float64))[0]; t=slim(np.array([list(eb.tail)],dtype=np.float64))[0]
+        eb.head=Vector(h.tolist()); eb.tail=Vector(t.tolist())
+bpy.ops.object.mode_set(mode='OBJECT')
 
 # ---------------------------------------------------------------- 4. face texture: strong brows, eye and skin definition
 img=bpy.data.images['face_eyes']; W,H=img.size
