@@ -201,7 +201,8 @@ export class Avatar {
           mat.alphaMap = mask; mat.alphaTest = 0.5; mat.needsUpdate = true
         }
       }
-      if (o.name.startsWith('avaturn_hair')) { mat.roughness = 0.5; mat.envMapIntensity = 1.4 }
+      if (o.name === 'avaturn_look_0') { mat.metalness = 0; mat.metalnessMap = null; mat.roughness = 0.88; mat.roughnessMap = null; mat.envMapIntensity = 0.5 }   // matte cloth: no glints on the trousers
+      if (o.name.startsWith('avaturn_hair')) { mat.roughness = 0.72; mat.envMapIntensity = 0.45; mat.color.multiplyScalar(0.75) }
     })
     // soft contact shadow under the feet
     const c = document.createElement('canvas'); c.width = c.height = 128
