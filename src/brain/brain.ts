@@ -3,7 +3,8 @@ import type { Gesture } from '../avatar/Avatar'
 export interface Answer { say: string; gesture: Gesture; mood: 'neutral' | 'happy' | 'serious' | 'proud'; jumpTo: string | null; audio?: string; source: 'live' | 'canned' | 'unknown' }
 interface Canned { id: string; q: string; keys: string[]; say: string; gesture: Gesture; mood: Answer['mood']; jumpTo: string | null }
 
-const TIMEOUT = 8000
+const TIMEOUT = 26000                 // a real answer is worth waiting for (the caption says "one moment" after 2.5 s); the server gives up on its own at ~24 s
+const history: { q: string; a: string }[] = []        // the last few turns, sent along so follow-ups ("why?", "give an example") make sense
 const GESTURE: Record<string, Gesture> = { talk: 'talk1', point_left: 'point', point_right: 'point', nod: 'talk2', shrug: 'present', thumbs_up: 'thumbs_up' }
 let canned: Promise<Canned[]> | null = null
 const loadCanned = () => (canned ??= fetch('/audio/answers/answers.json').then((r) => r.json()).then((j) => j.answers as Canned[]).catch(() => []))
@@ -23,12 +24,13 @@ const timed = (ms: number) => AbortSignal.timeout(ms)
 export async function askBrain(q: string): Promise<Answer> {
   try {
     const t0 = performance.now()
-    const r = await fetch('/api/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q }), signal: timed(TIMEOUT) })
+    const r = await fetch('/api/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, history: history.slice(-4) }), signal: timed(TIMEOUT) })
     if (r.ok) {
       const j = await r.json()
+      history.push({ q, a: j.say }); if (history.length > 6) history.shift()
       const ans: Answer = { say: j.say, gesture: GESTURE[j.gesture] ?? 'talk1', mood: j.mood ?? 'neutral', jumpTo: j.jumpTo ?? null, source: 'live' }
       try {
-        const left = Math.max(1500, TIMEOUT - (performance.now() - t0))
+        const left = Math.max(3000, Math.min(9000, TIMEOUT - (performance.now() - t0)))
         const v = await fetch('/api/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: j.say }), signal: timed(left) })
         if (v.ok) ans.audio = URL.createObjectURL(await v.blob())
       } catch { /* browser voice will speak it */ }
@@ -37,7 +39,7 @@ export async function askBrain(q: string): Promise<Answer> {
   } catch { /* offline, no key, rate-limited or slow: fall through */ }
   const c = await closestCanned(q)
   if (c) return { say: c.say, gesture: c.gesture, mood: c.mood, jumpTo: c.jumpTo, audio: `/audio/answers/${c.id}.mp3`, source: 'canned' }
-  return { say: "Good question, and I'd rather not guess. The real Alok can answer it properly: find him on LinkedIn as alok-chauhan-72a9603a1.", gesture: 'present', mood: 'neutral', jumpTo: null, source: 'unknown' }
+  return { say: "Hmm, my thinking cap isn't working properly right now, so I can't answer that one well. Ask me again in a moment, or find the real Alok on LinkedIn as alok-chauhan-72a9603a1.", gesture: 'present', mood: 'neutral', jumpTo: null, source: 'unknown' }
 }
 
 /** speaks with the browser's own voice (no audio file to analyse); resolves at the end */

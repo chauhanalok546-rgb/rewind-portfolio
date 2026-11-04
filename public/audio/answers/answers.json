@@ -70,9 +70,7 @@
    "q": "How Bug Slayer works",
    "keys": [
     "bug slayer",
-    "bugslayer",
-    "how does it work",
-    "walk me through"
+    "bugslayer"
    ],
    "say": "Bug Slayer is a Python command line tool. It runs the setup steps from a project's README inside a Docker sandbox. When a step fails, it asks Gemma to diagnose the failure and then patches the broken lines, and tries again.",
    "gesture": "talk1",
@@ -147,8 +145,6 @@
    "id": "product",
    "q": "Product to build",
    "keys": [
-    "what product",
-    "would you build",
     "own product",
     "startup",
     "build someday"
