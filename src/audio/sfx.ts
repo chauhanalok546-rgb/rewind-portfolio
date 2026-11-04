@@ -47,6 +47,23 @@ export const sfx = {
     const bg = c.createGain(); bg.gain.setValueAtTime(0.35, t0 + 0.004); bg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2)
     body.connect(bp); bp.connect(bg); bg.connect(master); body.start(t0)
   },
+  /** a robot dog's bark: two quick synthetic "arf"s (a pitched buzz through a vowel filter plus a little noise) */
+  bark() {
+    const c = ensure(); if (!master) return
+    for (const d of [0, 0.2]) {
+      const t0 = c.currentTime + d
+      const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(520, t0); o.frequency.exponentialRampToValueAtTime(240, t0 + 0.13)
+      const f1 = c.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.setValueAtTime(900, t0); f1.frequency.exponentialRampToValueAtTime(500, t0 + 0.13); f1.Q.value = 3
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.5, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16)
+      o.connect(f1); f1.connect(g); g.connect(master); o.start(t0); o.stop(t0 + 0.18)
+      const n = noise(c, 0.1), nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 1800; nf.Q.value = 1.5
+      const ng = c.createGain(); ng.gain.setValueAtTime(0.18, t0); ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08)
+      n.connect(nf); nf.connect(ng); ng.connect(master); n.start(t0)
+      const b = c.createOscillator(); b.type = 'square'; b.frequency.setValueAtTime(1760, t0 + 0.1); b.frequency.setValueAtTime(2349, t0 + 0.13)   // a tiny robotic beep tail
+      const bg = c.createGain(); bg.gain.setValueAtTime(0.0001, t0 + 0.1); bg.gain.exponentialRampToValueAtTime(0.05, t0 + 0.11); bg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.17)
+      b.connect(bg); bg.connect(master); b.start(t0 + 0.1); b.stop(t0 + 0.18)
+    }
+  },
   /** a vehicle passing: a pitch-dropping whoosh that pans from one side to the other (dir 1 = left to right) */
   flyby(dir = 1) {
     const c = ensure(); if (!master) return

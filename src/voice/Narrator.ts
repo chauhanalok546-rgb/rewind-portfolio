@@ -62,5 +62,6 @@ export class Narrator {
     a.setExpression(exp)
     if (g === 'greet') a.play('namaste' as Gesture)
     else if (g === 'present' || g === 'proud') a.play('present' as Gesture)
+    else if (g === 'point') a.play('point' as Gesture)
   }
 }

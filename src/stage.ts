@@ -7,6 +7,7 @@ import { createRobot } from './robot'
 import { createMachine } from './machine'
 import { createHovercar } from './hovercar'
 import { createEngine } from './engine'
+import { createDog } from './dog'
 import { sfx } from './audio/sfx'
 
 export type Theme = 'cinematic' | 'lab'
@@ -101,6 +102,10 @@ scene.add(robot.root)
 const machine = createMachine()
 machine.root.position.set(-1.2, 0.42, 0.1); machine.root.rotation.y = 0.5
 scene.add(machine.root)
+// RINGO, the robot dog: Alok's partner in time travel, always at his side
+const dog = createDog()
+scene.add(dog.root)
+let dogSide = -0.78, dogDepth = 0.06
 // the Chrono Engine: a large machine at the back of the lab
 const engine = createEngine()
 engine.root.position.set(0.1, -0.2, -5.4); engine.root.scale.setScalar(0.9)
@@ -156,13 +161,16 @@ export function setAmbience(kind: string) {
 }
 export function setAvatarPose(x: number, yaw: number, ms: number) {
   avatar.stopWalk(); avatar.root.position.z = 0; avatar.root.position.y = 0
+  dogSide = x === 0 ? -0.78 : -0.62; dogDepth = x === 0 ? 0.06 : 0.1; dog.root.scale.setScalar(x === 0 ? 1 : 1.1)
   if (ms <= 0) { avatar.root.position.x = x; avatar.root.rotation.y = yaw; return }
   gsap.to(avatar.root.position, { x, duration: ms / 1000, ease: 'power3.inOut' })
   gsap.to(avatar.root.rotation, { y: yaw, duration: ms / 1000, ease: 'power3.inOut' })
 }
 
 // ---- teleport: dissolve into cyan and amber light (feet up), reassemble head down; a sweeping clip plane + a particle burst
-const clipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1)       // visible where y > c (constant = -c)
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1)
+const dogClip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1)       // the dog is about a quarter of Alok's height, so his sweep is scaled to match
+function setClip(c: number) { clipPlane.constant = c; dogClip.constant = c > 3 ? c : c * 0.28 }       // visible where y > c (constant = -c)
 const tp = { c: -1, active: false, side: 0 }
 const P = 520
 const pPos = new Float32Array(P * 3), pVel = new Float32Array(P * 3), pLife = new Float32Array(P), pCol = new Float32Array(P * 3)
@@ -195,21 +203,22 @@ let clipApplied = false
 function applyClip() {
   if (clipApplied) return; clipApplied = true
   avatar.root.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined; if (!m) return; for (const x of ([] as THREE.Material[]).concat(m)) { x.clippingPlanes = [clipPlane]; x.clipShadows = true } })
+  dog.root.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined; if (!m) return; for (const x of ([] as THREE.Material[]).concat(m)) { x.clippingPlanes = [dogClip]; x.clipShadows = true } })
 }
 /** 'out': dissolve from the feet up (then hidden). 'in': reassemble from the head down. */
 export function teleport(dir: 'out' | 'in', ms = 1200): Promise<void> {
   applyClip(); avatar.root.visible = true
   const from = dir === 'out' ? -0.05 : 2.0, to = dir === 'out' ? 2.0 : -0.1
-  tp.c = from; clipPlane.constant = -tp.c; tp.active = true
+  tp.c = from; setClip(-tp.c); tp.active = true
   return new Promise((resolve) => {
-    gsap.to(tp, { c: to, duration: ms / 1000, ease: dir === 'out' ? 'power2.in' : 'power2.out', onUpdate: () => { clipPlane.constant = -tp.c }, onComplete: () => {
+    gsap.to(tp, { c: to, duration: ms / 1000, ease: dir === 'out' ? 'power2.in' : 'power2.out', onUpdate: () => { setClip(-tp.c) }, onComplete: () => {
       tp.active = false
-      if (dir === 'out') avatar.root.visible = false; else clipPlane.constant = 5
+      if (dir === 'out') avatar.root.visible = false; else setClip(5)
       resolve()
     } })
   })
 }
-export function setAvatarVisible(v: boolean) { applyClip(); avatar.root.visible = v; clipPlane.constant = v ? 5 : -5 }
+export function setAvatarVisible(v: boolean) { applyClip(); avatar.root.visible = v; setClip(v ? 5 : -5) }
 
 let closeUp = false
 const camBase = new THREE.Vector3(0, 1.05, 4.4), lookBase = new THREE.Vector3(0, 0.95, 0)
@@ -252,6 +261,7 @@ function tick() {
   const now = performance.now(); const dt = Math.min((now - prevT) / 1000, 0.05); prevT = now; elapsed += dt
   const t = elapsed
   avatar.update(dt)
+  dog.update(dt, t, { x: avatar.root.position.x, z: avatar.root.position.z, yaw: avatar.root.rotation.y, visible: avatar.root.visible && !closeUp, speaking: avatar.isSpeaking(), side: dogSide, depth: dogDepth })
   robot.update(dt)
   machine.update(dt, t)
   engine.update(dt, t)
@@ -292,7 +302,7 @@ export async function loadStage(onProgress: (f: number) => void) {
 }
 tick()
 
-export const stage = { avatar, narrator, robot, machine, hovercar, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
+export const stage = { avatar, narrator, dog, robot, machine, hovercar, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
 ;(window as unknown as Record<string, unknown>).__stage = stage
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
 ;(window as unknown as Record<string, unknown>).__narrator = narrator

@@ -108,7 +108,10 @@ async function presence() {
 
 async function greeting() {
   setState('GREETING')
-  await narrator.playSequence(['greet_1', 'greet_2'])   // namaste + two greeting lines
+  await narrator.playSequence(['greet_1', 'greet_ringo'])   // namaste, then he introduces his partner Ringo
+  stage.dog.bark(); sfx.bark(); stage.dog.alert()          // Ringo answers with a bark
+  await wait(1100)
+  await narrator.playSequence(['greet_2'])
   avatar.setExpression('neutral')
   ask()
 }
@@ -196,7 +199,7 @@ async function transition() {
     avatar.play('snap')
   })
   await snapped                                    // fingers slip: crisp snap
-  sfx.snap(); avatar.blinkNow(0.5); shockwave()      // the snap: a crisp click and rings of light from him
+  sfx.snap(); avatar.blinkNow(0.5); shockwave(); stage.dog.alert()      // the snap: a crisp click and rings of light from him
   fx.flare = 1; fx.chrono = 1; decay('chrono', 2600)  // chronometer flares, rings flare
   fx.ringSpeed = 5; fx.motes = 4
   await wait(reduced ? 80 : 520)                     // a beat to let the snap land ...

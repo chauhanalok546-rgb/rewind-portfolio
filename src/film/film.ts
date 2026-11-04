@@ -105,7 +105,7 @@ async function travel(from: number, to: number) {
       avatar.onEvent = (name) => { if (name === 'snap') { avatar.onEvent = undefined; clearTimeout(done); resolve() } }
       avatar.play('snap')
     })
-    sfx.snap(); shockwave(); stage.fx.flare = 1; gsap.to(stage.fx, { flare: 0, duration: 1.4 })
+    sfx.snap(); shockwave(); stage.dog.alert(); stage.fx.flare = 1; gsap.to(stage.fx, { flare: 0, duration: 1.4 })
   }
   tunnel.start(500); sfx.warp(1.0); sfx.whoosh(1.6); stage.fx.ringSpeed = 5
   gsap.to(stage.fx, { warp: 0.8, duration: 1.0, ease: 'power2.in' })
