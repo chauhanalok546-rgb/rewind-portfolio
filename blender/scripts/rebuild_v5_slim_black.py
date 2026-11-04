@@ -26,6 +26,10 @@ def extend_legs():
         # the leg's centre line at the ankle (from the leg bone), and the hem's own centre
         ly=-0.021+0.032*((0.521-zt)/(0.521-0.091))
         shift_y=ly-cy; tx=sgn*0.086
+        # a smooth patch of this leg's fabric (front of the thigh) to sample for the whole extension
+        cand=[v for v in bm.verts if 0.55<v.co.z<0.70 and v.co.x*sgn>0.03 and v.co.y<-0.03 and not v.is_boundary]
+        pv=min(cand,key=lambda v:(v.co.x-sgn*0.086)**2+(v.co.y+0.10)**2)
+        patch_uv=[l[uvl].uv.copy() for l in pv.link_loops][0]
         new={}
         for v in vs:
             nv=bm.verts.new(Vector((tx+(v.co.x-cx)*0.93, ly+(v.co.y-cy)*0.93, zt)))
@@ -39,7 +43,7 @@ def extend_legs():
                     a,b=l.vert,l.link_loop_next.vert; ua,ub=l[uvl].uv.copy(),l.link_loop_next[uvl].uv.copy(); break
             nf=bm.faces.new((b,a,new[a],new[b]))
             for l in nf.loops:
-                l[uvl].uv = ub if l.vert==b else ua if l.vert==a else (ua if l.vert==new[a] else ub)
+                l[uvl].uv=patch_uv                  # flat cloth on all four corners: no stretched trim, no sweep across the atlas
     newv=[v for v in bm.verts if v.co.z<0.14]
     bmesh.ops.remove_doubles(bm, verts=newv, dist=1e-5)
     bm.normal_update(); bm.to_mesh(me); bm.free(); me.update()
@@ -205,7 +209,7 @@ zsum={}; zn={}
 for t,ids in zip(lme.loop_triangles,tri_ids):
     c=find(ids[0]); zsum[c]=zsum.get(c,0)+LV[list(t.vertices)][:,2].mean(); zn[c]=zn.get(c,0)+1
 for c in zsum:
-    if zsum[c]/zn[c]<0.9: low.add(c)                      # the pockets and other trouser pieces that do not reach the ankle
+    if zn[c]<=140 and zsum[c]/zn[c]<1.05: low.add(c)      # patch pockets and other small trouser pieces
 print("trouser pieces:",len(low),[ (round(zsum[c]/zn[c],2),zn[c]) for c in low])
 for t,ids in zip(lme.loop_triangles,tri_ids):
     if find(ids[0]) not in low: continue
