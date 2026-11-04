@@ -21,6 +21,12 @@ export class Narrator {
 
   get playing() { return this.token > 0 }
 
+  /** while held, no new line starts (a line already playing is paused by the avatar, see Avatar.holdSpeech) */
+  private gate: Promise<void> | null = null
+  private open?: () => void
+  hold() { if (!this.gate) this.gate = new Promise<void>((r) => { this.open = r }) }
+  release() { this.open?.(); this.gate = null; this.open = undefined }
+
   stop() {
     this.token++ ; this.avatar.stop(); this.onCaption?.(null); this.avatar.setExpression('neutral')
   }
@@ -29,6 +35,7 @@ export class Narrator {
   async playLine(id: string): Promise<void> {
     const line = this.lines.find((l) => l.id === id)
     if (!line) return
+    await this.gate
     const my = ++this.token
     this.onCaption?.(line.text, line)
     this.mood(line)
@@ -41,6 +48,7 @@ export class Narrator {
   async playSequence(ids: string[], gapMs = 350) {
     const my = ++this.token
     for (const id of ids) {
+      await this.gate
       if (my !== this.token) return
       const line = this.lines.find((l) => l.id === id)
       if (!line) continue

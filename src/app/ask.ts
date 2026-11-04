@@ -4,17 +4,40 @@ import { $, log } from './hud'
 import { askBrain, speakBrowser, stopBrowserSpeech, SUGGESTIONS, type Answer } from '../brain/brain'
 import type { State } from './app'
 
-/** "Ask Alok": type, tap a suggestion, or dictate a question. The film pauses, the twin listens, thinks, answers out loud and the film resumes. */
+/** "Ask Alok": the moment it is opened everything stops where it is (the film, the line he is saying, his wandering). He listens, answers the
+ *  visitor's question out loud, and then the world picks up exactly where it left off: the same line continues from the same word. */
 interface Deps { getState: () => State; caption: (t: string | null) => void; startListening: (onText: (t: string) => void) => boolean }
 const { avatar, narrator } = stage
 let working = false
+let held = false, wasPlaying = false, wasAuto = false
+let snap: ReturnType<typeof avatar.holdSpeech> = null
+let prevCaption = { text: '', on: false }
 
 export function initAsk(d: Deps) {
   const box = $('askbox'), input = $('askbox-input') as HTMLInputElement, mic = $('askbox-mic'), form = $('askbox-form')
   const chips = $('askbox-chips')
   for (const s of SUGGESTIONS) { const c = document.createElement('button'); c.type = 'button'; c.className = 'chip'; c.textContent = s; c.addEventListener('click', () => void submit(s)); chips.appendChild(c) }
-  const open = () => { box.classList.remove('hidden'); box.setAttribute('aria-hidden', 'false'); requestAnimationFrame(() => input.focus()) }
-  const close = () => { if (box.contains(document.activeElement)) (document.activeElement as HTMLElement).blur(); box.classList.add('hidden'); box.setAttribute('aria-hidden', 'true') }
+  function holdWorld() {
+    if (held) return
+    held = true
+    const sub = $('sub'); prevCaption = { text: sub.textContent ?? '', on: sub.classList.contains('on') }
+    snap = avatar.holdSpeech(); narrator.hold(); stopBrowserSpeech()           // freeze the line he is saying, keep its place, block the next one
+    wasPlaying = film.running && !film.paused; if (wasPlaying) film.pause()      // freeze the film
+    wasAuto = avatar.isAutonomous; avatar.setAutonomous(false)                   // no wandering while he is listening
+    avatar.lookAtVisitor(0, 0.05, 120000)                                        // eyes on the visitor
+  }
+  function releaseWorld() {
+    if (!held) return
+    held = false
+    avatar.lookAtVisitor(0, 0.03, 1); avatar.setExpression('neutral')
+    d.caption(prevCaption.on ? prevCaption.text : null)                           // the caption he was showing comes back
+    narrator.release(); avatar.resumeSpeech(snap); snap = null                    // the interrupted line carries on from the same spot
+    if (wasAuto) avatar.setAutonomous(true)
+    if (wasPlaying) film.resume()
+  }
+  const open = () => { holdWorld(); box.classList.remove('hidden'); box.setAttribute('aria-hidden', 'false'); requestAnimationFrame(() => input.focus()) }
+  const close = () => { if (box.contains(document.activeElement)) (document.activeElement as HTMLElement).blur(); box.classList.add('hidden'); box.setAttribute('aria-hidden', 'true'); if (!working) releaseWorld() }
+  const hide = () => { if (box.contains(document.activeElement)) (document.activeElement as HTMLElement).blur(); box.classList.add('hidden'); box.setAttribute('aria-hidden', 'true') }
   $('c-ask').addEventListener('click', () => (box.classList.contains('hidden') ? open() : close()))
   $('askbox-close').addEventListener('click', close)
   form.addEventListener('submit', (e) => { e.preventDefault(); const q = input.value.trim(); if (q) void submit(q) })
@@ -27,22 +50,16 @@ export function initAsk(d: Deps) {
 
   async function submit(q: string) {
     if (working) return
-    working = true; input.value = ''; close()
-    const wasPlaying = film.running && !film.paused
-    if (wasPlaying) film.pause()
-    narrator.stop(); stopBrowserSpeech()
+    working = true; input.value = ''; hide(); holdWorld()
     log(`Ask: ${q.slice(0, 60)}`)
-    avatar.lookAtVisitor(0, 0.05, 8000); avatar.setExpression('neutral')       // listens: eyes on the visitor
     d.caption(`You: “${q}”`)
     const slow = setTimeout(() => d.caption('Good question, one moment…'), 2500)
     let a: Answer
     try { a = await askBrain(q) } finally { clearTimeout(slow) }
     log(`Answer: ${a.source}`)
     await deliver(a)
-    d.caption(null); avatar.setExpression('neutral')
     working = false
-    if (a.jumpTo && (d.getState() === 'FILM' || d.getState() === 'END')) { film.jump(Number(a.jumpTo.replace('scene', ''))); return }
-    if (wasPlaying) film.resume()
+    releaseWorld()                                                                 // back to exactly where we were (the answer never skips ahead in the story)
   }
 
   async function deliver(a: Answer) {

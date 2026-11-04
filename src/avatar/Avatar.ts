@@ -112,6 +112,19 @@ export class Avatar {
   private lastPointer = 0
   /** tuning for the procedural gait (signs depend on the skeleton's axes) */
   gait = { thigh: 1, knee: 1, arm: 1, swing: 0.5, speed: 0.5 }
+  get isAutonomous() { return this.auto.on }
+  /** pause the line that is playing (keeps its place) so something else can speak; resumeSpeech continues it exactly where it stopped */
+  holdSpeech() {
+    const el = this.audio
+    if (!el || el.paused || el.ended) return null
+    el.pause(); this.analyserMode = false
+    return { el, cues: this.cues, idx: this.cueIdx }
+  }
+  resumeSpeech(s: { el: HTMLAudioElement; cues: VisemeCue[]; idx: number } | null) {
+    if (!s) return
+    this.audio = s.el; this.cues = s.cues; this.cueIdx = s.idx; this.analyserMode = true
+    void s.el.play().catch(() => undefined)
+  }
   setAutonomous(on: boolean) { this.auto.on = on; if (!on) this.stopWalk() }
   walkTo(x: number, z: number) { this.auto.tx = x; this.auto.tz = z; this.auto.walking = true; this.auto.settle = true }
   stopWalk() { this.auto.walking = false }
