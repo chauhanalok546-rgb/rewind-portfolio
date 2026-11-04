@@ -3,7 +3,6 @@ import { fx, loadStage, stage, type Theme } from '../stage'
 import { film } from '../film/film'
 import { $, decay, hide, log, reduced, setStatus, shockwave, show, wait, whiteFlash } from './hud'
 import { tunnel } from '../film/tunnel'
-import { startBargeIn } from '../voice/bargein'
 import { music } from '../audio/music'
 import gsap from 'gsap'
 import { sfx } from '../audio/sfx'
@@ -12,7 +11,7 @@ import { startPresence, type Presence } from '../sense/presence'
 import { Recognizer, voiceSupported } from '../voice/recognizer'
 import { parseCommand } from '../voice/parse'
 import { initAsk } from './ask'
-import { isEcho, looksLikeQuestion, wakePhrase } from '../voice/question'
+import { isEcho, looksLikeQuestion, wakeFragment, wakePhrase } from '../voice/question'
 
 /** The experience as an explicit state machine:  BOOT → ENTER → LOBBY → PRESENCE → GREETING → ASK → TRANSITION → ARRIVED
  *  (the film itself arrives in the next phase).  Any state can be jumped to with a URL hash, e.g. #ask or #lobby. */
@@ -141,6 +140,8 @@ function onWake(text: string, interim: boolean): boolean {
   const now = performance.now()
   if (interim) { if (!askApi.isListening() && now - lastWake > 2500) { lastWake = now; log('Voice: wake phrase'); askApi.listen() } return true }
   heard(text)
+  const cmd = rest ? parseCommand(rest, filmCtx()) : null
+  if (cmd) { lastWake = now; askApi.cancel(); runCommand(cmd, rest); return true }                   // "Hey Alok, pause" / "next" / "twenty twenty four"
   if (rest.split(' ').filter(Boolean).length >= 3) { lastWake = now; void askApi.ask(rest) }       // the question came with the wake phrase
   else if (!askApi.isListening() && now - lastWake > 2500) { lastWake = now; log('Voice: wake phrase'); askApi.listen() }
   return true
@@ -154,12 +155,19 @@ function handleSpeech(text: string) {
     if (askApi.isListening()) {                                           // he is listening: the next thing said is the question
       if (!askApi.ready()) return                                         // still saying "Yes, I'm listening": that is his own voice in the mic
       const words = text.trim().split(/\s+/).filter(Boolean)
+      const c2 = words.length <= 4 ? parseCommand(text, filmCtx()) : null
+      if (c2) { askApi.cancel(); runCommand(c2, text); return }                                    // while he listens, "next" / "pause" work too
       if (words.length >= 2 && !isEcho(text, spoken.slice(-3).map((s) => s.text))) { heard(text); void askApi.ask(text.trim()) }
       return
     }
   }
-  const cmd = parseCommand(text, { asking: state === 'ASK', inFilm: state === 'FILM' || state === 'END' })
-  if (!cmd) { if (!WAKE_REQUIRED) handsFreeQuestion(text); return }
+  // Without his name he only takes the Yes / No answer to "Travel back in time?". Every other voice command needs "Hey Alok, ..." first,
+  // so other people talking nearby, a TV or any noise can never pause, skip or jump the story.
+  if (state === 'ASK') { const c = parseCommand(text, { asking: true, inFilm: false }); if (c) runCommand(c, text) }
+  else if (!WAKE_REQUIRED) handsFreeQuestion(text)
+}
+const filmCtx = () => ({ asking: state === 'ASK', inFilm: state === 'FILM' || state === 'END' })
+function runCommand(cmd: NonNullable<ReturnType<typeof parseCommand>>, text: string) {
   heard(text); log(`Voice: ${cmd.type}${cmd.type === 'year' ? ' ' + cmd.year : ''}`)
   switch (cmd.type) {
     case 'yes': void sayYes(); break
@@ -176,7 +184,7 @@ function handleSpeech(text: string) {
 }
 /** Hands-free: a question spoken to him is answered on his own (the world pauses, he answers, the world carries on). Ignored while he is
  *  talking, for a moment after, and whenever the words are just his own voice coming back through the speakers. */
-let askApi: { ask: (q: string) => Promise<void>; listen: () => void; isListening: () => boolean; ready: () => boolean } | null = null
+let askApi: { ask: (q: string) => Promise<void>; listen: () => void; isListening: () => boolean; ready: () => boolean; cancel: () => void } | null = null
 const WAKE_REQUIRED = true      // true: he only answers after "Hey Alok, listen" (or a question that starts with "Hey Alok"); false: any clear question also works
 function handsFreeQuestion(text: string) {
   if (!askApi || ['BOOT', 'ENTER', 'TRANSITION'].includes(state)) return
@@ -195,22 +203,28 @@ function showHearing(text: string) {
   el.textContent = '🎧 ' + text.trim().slice(-70); el.classList.add('on')
   clearTimeout(hearTimer); hearTimer = setTimeout(() => el!.classList.remove('on'), 2200)
 }
+/** only when the START of "Hey Alok" is recognised does his voice dip a little (and returns on its own): noise and other talk never do this */
+let duckTimer: ReturnType<typeof setTimeout> | undefined
+function softDuck() {
+  avatar.setDuck(0.25); music.setBarge(true)
+  clearTimeout(duckTimer); duckTimer = setTimeout(() => { avatar.setDuck(1); music.setBarge(false) }, 2200)
+}
 let voiceStarted = false
+function handleInterim(t: string) { showHearing(t); if (wakeFragment(t)) softDuck(); if (!askCapture) onWake(t, true) }
 function startVoice() {
   if (voiceStarted) return
   if (!voiceSupported) { toast('Voice talk needs Chrome, Edge or Safari. The buttons do everything.'); return }
   voiceStarted = true
   const mic = $('c-mic') as HTMLButtonElement
-  mic.disabled = false; mic.title = 'Say “Hey Alok, listen” and ask him anything. Also: pause, skip, back, replay, contact or a year (M)'
+  mic.disabled = false; mic.title = 'Say “Hey Alok, listen” and ask him anything. He only reacts when addressed: “Hey Alok, pause / skip / back / replay / contact” (M)'
   recognizer.onFinal = handleSpeech
-  recognizer.onInterim = (t) => { showHearing(t); if (!askCapture) onWake(t, true) }
+  recognizer.onInterim = handleInterim
   recognizer.onState = (st) => {
     const on = st === 'listening'
     mic.classList.toggle('listening', on); mic.setAttribute('aria-pressed', String(on))
     document.documentElement.dataset.voice = on ? 'on' : 'off'
     if (on && !mic.dataset.logged) {
       mic.dataset.logged = '1'; log('Microphone listening ✓'); toast('Say “Hey Alok, listen” to ask me anything, even while I am talking')
-      startBargeIn((talking) => { avatar.setDuck(talking ? 0.1 : 1); music.setBarge(talking) })       // his voice drops the moment you speak over him
     }
     if (st === 'blocked') { mic.disabled = true; mic.title = 'Microphone blocked: buttons do everything'; log('Microphone declined'); toast('Microphone is blocked here. Open the site in Chrome and allow the mic to talk to Alok.') }
   }
@@ -351,4 +365,4 @@ export async function startApp() {
   }
 }
 export { toast }
-;(window as unknown as Record<string, unknown>).__heard = handleSpeech;(window as unknown as Record<string, unknown>).__heardInterim = (t: string) => onWake(t, true)     // dev hook: pretend the microphone heard this sentence
+;(window as unknown as Record<string, unknown>).__heard = handleSpeech;(window as unknown as Record<string, unknown>).__heardInterim = handleInterim     // dev hook: pretend the microphone heard this sentence

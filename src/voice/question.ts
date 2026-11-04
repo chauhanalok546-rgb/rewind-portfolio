@@ -40,3 +40,10 @@ export function wakePhrase(text: string): string | null {
   for (const re of [WAKE_A, WAKE_B, WAKE_C, WAKE_D, WAKE_E, WAKE_F]) { const m = re.exec(t); if (m) return m[1].replace(/^\s*(listen|please|can you hear me|are you there|for a second|one second|a second)\b/, '').trim() }
   return null
 }
+
+/** The first syllables of a wake phrase ("hey a...", "hi alok", "alok"): used only to turn his voice down a little while the rest of the phrase arrives.
+ *  Ordinary loud noise and ordinary speech never match, so they never touch his narration. */
+export function wakeFragment(text: string): boolean {
+  const t = norm(text).replace(HEARD_AS, 'alok')
+  return /\b(?:hey|hi|hello|okay|ok|excuse me|wait)\s+(?:a|al|alo|alok)\b/.test(t) || /\balok\b/.test(t)
+}

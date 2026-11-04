@@ -14,7 +14,7 @@ let held = false, wasPlaying = false, wasAuto = false
 let snap: ReturnType<typeof avatar.holdSpeech> = null
 let prevCaption = { text: '', on: false }
 
-export function initAsk(d: Deps): { ask: (q: string) => Promise<void>; listen: () => void; isListening: () => boolean; ready: () => boolean } {
+export function initAsk(d: Deps): { ask: (q: string) => Promise<void>; listen: () => void; isListening: () => boolean; ready: () => boolean; cancel: () => void } {
   const box = $('askbox'), input = $('askbox-input') as HTMLInputElement, mic = $('askbox-mic'), form = $('askbox-form')
   const chips = $('askbox-chips')
   for (const s of SUGGESTIONS) { const c = document.createElement('button'); c.type = 'button'; c.className = 'chip'; c.textContent = s; c.addEventListener('click', () => void submit(s)); chips.appendChild(c) }
@@ -32,7 +32,7 @@ export function initAsk(d: Deps): { ask: (q: string) => Promise<void>; listen: (
     held = false
     avatar.lookAtVisitor(0, 0.03, 1); avatar.setExpression('neutral')
     d.caption(prevCaption.on ? prevCaption.text : null)                           // the caption he was showing comes back
-    narrator.release(); avatar.resumeSpeech(snap, 420); snap = null                    // the interrupted line carries on from the same spot
+    avatar.setDuck(1); narrator.release(); avatar.resumeSpeech(snap, 420); snap = null                    // the interrupted line carries on from the same spot
     if (wasAuto) avatar.setAutonomous(true)
     if (wasPlaying) film.resume()
   }
@@ -117,5 +117,5 @@ export function initAsk(d: Deps): { ask: (q: string) => Promise<void>; listen: (
     else { avatar.flapping = true; await speakBrowser(a.say); if (my === askToken) avatar.flapping = false }
     if (a.audio?.startsWith('blob:')) URL.revokeObjectURL(a.audio)
   }
-  return { ask: submit, listen, isListening: () => listening, ready: () => listening && ready }
+  return { ask: submit, listen, isListening: () => listening, ready: () => listening && ready, cancel: close }
 }
