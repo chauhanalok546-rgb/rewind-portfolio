@@ -28,7 +28,7 @@ def extend_legs():
         shift_y=ly-cy; tx=sgn*0.086
         new={}
         for v in vs:
-            nv=bm.verts.new(Vector((tx+(v.co.x-cx)*0.78, ly+(v.co.y-cy)*0.78, zt)))
+            nv=bm.verts.new(Vector((tx+(v.co.x-cx)*0.93, ly+(v.co.y-cy)*0.93, zt)))
             dv=nv[dl]; dv[gi[side+'Leg']]=0.86; dv[gi[side+'Foot']]=0.14
             new[v]=nv
         done=set()
@@ -44,6 +44,31 @@ def extend_legs():
     bmesh.ops.remove_doubles(bm, verts=newv, dist=1e-5)
     bm.normal_update(); bm.to_mesh(me); bm.free(); me.update()
 extend_legs()
+
+# plain trousers: remove the cargo pockets (the small separate pieces on the thighs and shins)
+def remove_pockets():
+    me=look.data; bm=bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()
+    keys={}; parent=[]
+    def vid(v):
+        k=tuple(np.round(np.array(v.co[:])*1e4).astype(int))
+        if k not in keys: keys[k]=len(parent); parent.append(len(parent))
+        return keys[k]
+    def find(i):
+        while parent[i]!=i: parent[i]=parent[parent[i]]; i=parent[i]
+        return i
+    fids=[]
+    for f in bm.faces:
+        ids=[vid(v) for v in f.verts]; fids.append(ids)
+        for j in range(1,len(ids)): parent[find(ids[j])]=find(ids[0])
+    cnt={}; zs={}
+    for f,ids in zip(bm.faces,fids):
+        c=find(ids[0]); cnt[c]=cnt.get(c,0)+1; zs[c]=zs.get(c,0)+f.calc_center_median().z
+    kill={c for c in cnt if cnt[c]<=100 and zs[c]/cnt[c]<0.9}
+    doomed=[f for f,ids in zip(bm.faces,fids) if find(ids[0]) in kill]
+    print("pocket pieces removed:",len(kill),"faces",len(doomed))
+    bmesh.ops.delete(bm,geom=doomed,context='FACES')
+    bm.to_mesh(me); bm.free(); me.update()
+remove_pockets()
 
 # ---------------------------------------------------------------- 2. slimmer build (body, clothes; shape keys moved the same way)
 def slim(co):
