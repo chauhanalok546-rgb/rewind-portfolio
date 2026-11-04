@@ -11,6 +11,13 @@ export interface Presence {
 
 const none = (result: CameraResult): Presence => ({ result, waitForFace: () => Promise.resolve(false), stop() {} })
 
+/** Called while the loading screen is up: pulls the face-detection library, its WebAssembly runtime and the model into the browser cache, so that
+ *  after the Enter click the detector starts in a blink instead of taking seconds. Nothing is started and no camera is touched. */
+export function warmPresence() {
+  void import('@mediapipe/tasks-vision').catch(() => undefined)
+  for (const u of ['/mediapipe/wasm/vision_wasm_internal.wasm', '/mediapipe/wasm/vision_wasm_internal.js', '/models/blaze_face_short_range.tflite']) void fetch(u).catch(() => undefined)
+}
+
 /** Call from the Enter click: it asks the browser for camera permission right away. */
 export async function startPresence(): Promise<Presence> {
   if (!navigator.mediaDevices?.getUserMedia) return none('unsupported')

@@ -7,7 +7,7 @@ import { music } from '../audio/music'
 import gsap from 'gsap'
 import { sfx } from '../audio/sfx'
 import { mountStickers, toast } from '../ui/stickers'
-import { startPresence, type Presence } from '../sense/presence'
+import { startPresence, warmPresence, type Presence } from '../sense/presence'
 import { Recognizer, voiceSupported } from '../voice/recognizer'
 import { parseCommand } from '../voice/parse'
 import { initAsk } from './ask'
@@ -56,6 +56,8 @@ async function boot() {
   await typeInto(log$, 'booting alok.os v18\n'); await typeInto(log$, 'calibrating robotic arm ✓\n'); await typeInto(log$, 'loading avatar …')
   try { await loading } catch (e) { log$.textContent += `\nfailed: ${e}\nthe classic portfolio is linked at the bottom of the page`; throw e }
   bar.style.width = '100%'
+  warmPresence()                                                                   // face detector files, so Enter -> greeting is quick
+  for (const id of ['greet_1', 'greet_ringo', 'greet_2', 'yes_1']) { avatar.preloadAudio(`/audio/narration/${id}.mp3`); void fetch(`/audio/narration/cues/${id}.json`).catch(() => undefined) }
   await wait(Math.max(0, 1400 - (performance.now() - started)))
   log$.textContent += ' ✓'
   await wait(350)
@@ -84,31 +86,30 @@ async function lobby() {
   setStatus('Standby')
   avatar.setAutonomous(true)                       // from now on the twin wanders, glances around and gestures by itself
   log('Audio channel open ✓')
-  await wait(2400)                                 // the avatar idles and glances around first
+  await wait(450)                                  // a beat for the avatar to settle, then he greets
   void presence()
 }
 
-/** PRESENCE: wait (up to 10 s) until a face is held steady for about a second; no camera means we greet right away. */
+/** PRESENCE: the camera can only delay the greeting by about a second (it used to wait up to 25 s); no camera, or a slow permission prompt, means we greet right away. */
 async function presence() {
   setState('PRESENCE')
   let cam: Presence | null = null
   if (cameraReady) {
     const pending = cameraReady
-    cam = await Promise.race([pending, wait(15000).then(() => null)])      // never wait forever on a permission prompt
+    cam = await Promise.race([pending, wait(1100).then(() => null)])       // never wait on a permission prompt
     if (!cam) void pending.then((late) => late.stop())
   }
   if (cam && cam.result === 'watching') {
     log('Camera ready ✓')
-    const seen = await cam.waitForFace(1000, 10000, (x, y) => avatar.lookAtVisitor((0.5 - x) * 0.7, (0.5 - y) * 0.4, 9000))
+    const seen = await cam.waitForFace(350, 900, (x, y) => avatar.lookAtVisitor((0.5 - x) * 0.7, (0.5 - y) * 0.4, 9000))
     log(seen ? 'Face detected ✓' : 'No face seen, starting anyway')
     cam.stop(); log('Camera off ✓')                 // the camera is turned off once the greeting starts
-    if (seen) { avatar.lookAtVisitor(0, 0.05, 9000); await wait(600) }
+    if (seen) avatar.lookAtVisitor(0, 0.05, 9000)
   } else {
     log(cam && cam.result === 'denied' ? 'Camera declined, skipping detection' : 'No camera, skipping detection')
     log('Visitor connected ✓')
   }
   avatar.setExpression('happy')
-  await wait(500)
   void greeting()
 }
 
