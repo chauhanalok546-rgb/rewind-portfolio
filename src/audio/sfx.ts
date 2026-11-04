@@ -54,7 +54,7 @@ export const sfx = {
       const t0 = c.currentTime + d
       const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(520, t0); o.frequency.exponentialRampToValueAtTime(240, t0 + 0.13)
       const f1 = c.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.setValueAtTime(900, t0); f1.frequency.exponentialRampToValueAtTime(500, t0 + 0.13); f1.Q.value = 3
-      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.5, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16)
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.9, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16)
       o.connect(f1); f1.connect(g); g.connect(master); o.start(t0); o.stop(t0 + 0.18)
       const n = noise(c, 0.1), nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 1800; nf.Q.value = 1.5
       const ng = c.createGain(); ng.gain.setValueAtTime(0.18, t0); ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08)

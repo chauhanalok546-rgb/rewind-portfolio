@@ -73,7 +73,7 @@ export function createDog() {
   const target = new THREE.Vector3()
   return {
     root, materials: [graphite, white, amber, cyan, eyeMat],
-    bark() { bark = 0.55 },
+    bark() { bark = 0.5 },
     alert() { alert = 1 },
     update(dt: number, t: number, c: DogCtx) {
       root.visible = c.visible
@@ -95,7 +95,7 @@ export function createDog() {
         l.hip.rotation.x = (l.front ? 0.28 : 0.42) + s * 0.55 * gait
         l.knee.rotation.x = (l.front ? -0.62 : -0.7) - lift * 0.8 * gait
       }
-      body.position.y = TORSO_Y + Math.abs(Math.sin(ph)) * 0.022 * gait + Math.sin(t * 1.7) * 0.004
+      body.position.y = TORSO_Y + Math.abs(Math.sin(ph)) * 0.022 * gait + Math.sin(t * 1.7) * 0.004 + (bark > 0 ? Math.abs(Math.sin((bark / 0.5) * Math.PI * 2)) * 0.05 : 0)
       body.rotation.z = Math.sin(ph) * 0.05 * gait
       body.rotation.x = Math.sin(ph * 2) * 0.03 * gait
       // head: tilts toward Alok when he talks, glances around when idle, snaps up for a bark
@@ -104,8 +104,8 @@ export function createDog() {
       const toward = -Math.sign(c.side) * 0.55
       const yawT = c.speaking ? toward : glance
       head.rotation.y += (yawT - head.rotation.y) * (1 - Math.exp(-5 * dt))
-      const barkK = bark > 0 ? Math.sin((bark / 0.55) * Math.PI * 3) : 0
-      head.rotation.x = -0.1 - barkK * 0.22 - alert * 0.15 + Math.sin(t * 1.3) * 0.03
+      const barkK = bark > 0 ? Math.abs(Math.sin((bark / 0.5) * Math.PI * 2)) : 0
+      head.rotation.x = -0.1 - barkK * 0.4 - alert * 0.15 + Math.sin(t * 1.3) * 0.03
       head.rotation.z = (c.speaking ? 0.2 * -Math.sign(c.side) : Math.sin(t * 0.6) * 0.07)
       for (let i = 0; i < 2; i++) ears[i].rotation.x = Math.sin(t * 2.2 + i) * 0.04 + alert * 0.35
       const wag = c.speaking || bark > 0 ? 13 : 5

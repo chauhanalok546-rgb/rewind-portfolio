@@ -108,9 +108,13 @@ async function presence() {
 
 async function greeting() {
   setState('GREETING')
-  await narrator.playSequence(['greet_1', 'greet_ringo'])   // namaste, then he introduces his partner Ringo
-  stage.dog.bark(); sfx.bark(); stage.dog.alert()          // Ringo answers with a bark
-  await wait(1100)
+  await narrator.playSequence(['greet_1'])
+  // "... Say hi, Ringo."  Ringo barks right as the line ends: a yap, the head snapping up, a little hop and the bark sound
+  const ringo = narrator.lines.find((l) => l.id === 'greet_ringo')
+  const barkTimer = setTimeout(() => { stage.dog.bark(); sfx.bark(); stage.dog.alert() }, Math.max(0, ((ringo?.duration ?? 8) - 0.3) * 1000))
+  await narrator.playSequence(['greet_ringo'], 0)
+  clearTimeout(barkTimer)
+  await wait(1000)
   await narrator.playSequence(['greet_2'])
   avatar.setExpression('neutral')
   ask()

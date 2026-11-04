@@ -8,7 +8,6 @@ import { createMachine } from './machine'
 import { createHovercar } from './hovercar'
 import { createEngine } from './engine'
 import { createDog } from './dog'
-import { sfx } from './audio/sfx'
 
 export type Theme = 'cinematic' | 'lab'
 
@@ -110,8 +109,8 @@ let dogSide = -0.78, dogDepth = 0.06
 const engine = createEngine()
 engine.root.position.set(0.1, -0.2, -5.4); engine.root.scale.setScalar(0.9)
 scene.add(engine.root)
-// hover-cars cruising through the background, with a passing whoosh
-const hovercar = createHovercar((dir) => sfx.flyby(dir))
+// hover-cars cruising through the background (silent: just the flight)
+const hovercar = createHovercar()
 hovercar.setEnabled(!reducedMotion)
 scene.add(hovercar.root)
 
