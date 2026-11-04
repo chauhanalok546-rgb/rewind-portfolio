@@ -23,7 +23,8 @@ MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_multilingual_v2")
 if not KEY: sys.exit("No key found: put ELEVENLABS_API_KEY=... in rewind/.env.local (or the environment).")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANSWERS = "--answers" in sys.argv
-OUT = os.path.join(ROOT, "public/audio/answers" if ANSWERS else "public/audio/narration")
+LISTEN = "--listen" in sys.argv
+OUT = os.path.join(ROOT, "public/audio/listen" if LISTEN else "public/audio/answers" if ANSWERS else "public/audio/narration")
 CLEAN = "highpass=f=70,silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.05,areverse,silenceremove=start_periods=1:start_threshold=-48dB:start_silence=0.12,areverse,loudnorm=I=-16:TP=-1.5:LRA=11,adelay=70|70,apad=pad_dur=0.1"
 
 def tts(text):
@@ -53,7 +54,11 @@ def render(id_, text):
     json.dump({"cues": lipsync.words_to_cues(words, shift=-max(0.0, onset - 0.05) + 0.07, total=dur)}, open(os.path.join(OUT, "cues", id_ + ".json"), "w"))
     print(f"ok  {id_:10} {dur:5.2f}s"); return round(dur, 2)
 
-if ANSWERS:
+if LISTEN:
+    p = os.path.join(OUT, "phrases.json"); d = json.load(open(p))
+    for l in d["lines"]: l["duration"] = render(l["id"], l["text"])
+    json.dump(d, open(p, "w"), indent=1, ensure_ascii=False)
+elif ANSWERS:
     p = os.path.join(OUT, "answers.json"); d = json.load(open(p))
     for a in d["answers"]: a["duration"] = render(a["id"], a["say"])
     d["voice"] = f"ElevenLabs {VOICE}"; json.dump(d, open(p, "w"), indent=1, ensure_ascii=False)

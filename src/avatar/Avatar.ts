@@ -120,10 +120,23 @@ export class Avatar {
     el.pause(); this.analyserMode = false
     return { el, cues: this.cues, idx: this.cueIdx }
   }
-  resumeSpeech(s: { el: HTMLAudioElement; cues: VisemeCue[]; idx: number } | null) {
+  resumeSpeech(s: { el: HTMLAudioElement; cues: VisemeCue[]; idx: number } | null, fadeMs = 0) {
     if (!s) return
     this.audio = s.el; this.cues = s.cues; this.cueIdx = s.idx; this.analyserMode = true
-    void s.el.play().catch(() => undefined)
+    if (fadeMs > 0) { s.el.volume = 0; void s.el.play().catch(() => undefined); this.ramp(s.el, this.duckLevel, fadeMs) }      // his voice fades back in
+    else void s.el.play().catch(() => undefined)
+  }
+  /** smooth volume change on one element */
+  private ramp(el: HTMLAudioElement, to: number, ms: number) {
+    const v0 = el.volume, t0 = performance.now()
+    const id = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); el.volume = v0 + (to - v0) * k; if (k >= 1) clearInterval(id) }, 16)
+  }
+  /** fade what he is saying right now down to nothing (resolves when silent); holdSpeech then pauses it at that point */
+  fadeOut(ms = 280): Promise<void> {
+    const el = this.audio
+    if (!el || el.paused || el.ended) return Promise.resolve()
+    this.ramp(el, 0, ms)
+    return new Promise((r) => setTimeout(r, ms + 20))
   }
   setAutonomous(on: boolean) { this.auto.on = on; if (!on) this.stopWalk() }
   walkTo(x: number, z: number) { this.auto.tx = x; this.auto.tz = z; this.auto.walking = true; this.auto.settle = true }

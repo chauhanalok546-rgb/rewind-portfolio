@@ -152,8 +152,9 @@ function handleSpeech(text: string) {
   if (askApi && !['BOOT', 'ENTER', 'TRANSITION'].includes(state)) {
     if (onWake(text, false)) return
     if (askApi.isListening()) {                                           // he is listening: the next thing said is the question
+      if (!askApi.ready()) return                                         // still saying "Yes, I'm listening": that is his own voice in the mic
       const words = text.trim().split(/\s+/).filter(Boolean)
-      if (words.length >= 2) { heard(text); void askApi.ask(text.trim()) }
+      if (words.length >= 2 && !isEcho(text, spoken.slice(-3).map((s) => s.text))) { heard(text); void askApi.ask(text.trim()) }
       return
     }
   }
@@ -175,7 +176,7 @@ function handleSpeech(text: string) {
 }
 /** Hands-free: a question spoken to him is answered on his own (the world pauses, he answers, the world carries on). Ignored while he is
  *  talking, for a moment after, and whenever the words are just his own voice coming back through the speakers. */
-let askApi: { ask: (q: string) => Promise<void>; listen: () => void; isListening: () => boolean } | null = null
+let askApi: { ask: (q: string) => Promise<void>; listen: () => void; isListening: () => boolean; ready: () => boolean } | null = null
 const WAKE_REQUIRED = true      // true: he only answers after "Hey Alok, listen" (or a question that starts with "Hey Alok"); false: any clear question also works
 function handsFreeQuestion(text: string) {
   if (!askApi || ['BOOT', 'ENTER', 'TRANSITION'].includes(state)) return

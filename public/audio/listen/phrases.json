@@ -1,0 +1,46 @@
+{
+ "lines": [
+  {
+   "id": "ack_1",
+   "speaker": "ALOK",
+   "text": "Yes, I'm listening.",
+   "duration": 1.16
+  },
+  {
+   "id": "ack_2",
+   "speaker": "ALOK",
+   "text": "I'm all ears. Go ahead.",
+   "duration": 1.43
+  },
+  {
+   "id": "ack_3",
+   "speaker": "ALOK",
+   "text": "Sure, what would you like to ask?",
+   "duration": 1.84
+  },
+  {
+   "id": "ack_4",
+   "speaker": "ALOK",
+   "text": "Yes? Go on, I'm listening.",
+   "duration": 1.9
+  },
+  {
+   "id": "skip_1",
+   "speaker": "ALOK",
+   "text": "No worries, let me carry on.",
+   "duration": 1.65
+  },
+  {
+   "id": "skip_2",
+   "speaker": "ALOK",
+   "text": "Alright, I'll continue.",
+   "duration": 1.49
+  },
+  {
+   "id": "skip_3",
+   "speaker": "ALOK",
+   "text": "Okay, back to my story.",
+   "duration": 1.6
+  }
+ ]
+}
