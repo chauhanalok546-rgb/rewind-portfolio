@@ -6,6 +6,7 @@ import { Narrator } from './voice/Narrator'
 import { createRobot } from './robot'
 import { createMachine } from './machine'
 import { createHovercar } from './hovercar'
+import { createEngine } from './engine'
 import { sfx } from './audio/sfx'
 
 export type Theme = 'cinematic' | 'lab'
@@ -100,6 +101,10 @@ scene.add(robot.root)
 const machine = createMachine()
 machine.root.position.set(-1.2, 0.42, 0.1); machine.root.rotation.y = 0.5
 scene.add(machine.root)
+// the Chrono Engine: a large machine at the back of the lab
+const engine = createEngine()
+engine.root.position.set(0.1, -0.2, -5.4); engine.root.scale.setScalar(0.9)
+scene.add(engine.root)
 // hover-cars cruising through the background, with a passing whoosh
 const hovercar = createHovercar((dir) => sfx.flyby(dir))
 hovercar.setEnabled(!reducedMotion)
@@ -126,7 +131,7 @@ export const getTheme = () => theme
 setTheme('cinematic')
 
 // ---- lobby objects can be hidden while the film plays
-const lobbyObjects: THREE.Object3D[] = [platform, edge, pool, ...rings, robot.root]
+const lobbyObjects: THREE.Object3D[] = [platform, edge, pool, ...rings, robot.root, engine.root]
 export function setLobbyVisible(v: boolean, ms = 0) {
   const apply = (o: THREE.Object3D, on: boolean) => { o.visible = on }
   if (ms <= 0) { lobbyObjects.forEach((o) => apply(o, v)); return }
@@ -226,7 +231,7 @@ function resize() {
   camera.fov = w / h < 0.7 ? 38 : 28
   // portrait phones: pull back and look higher so the avatar sits in the lower part of the screen (cards go above him)
   if (w / h < 1.0) { camBase.set(0, 1.25, 5.3); lookBase.set(0, 1.62, 0) } else { camBase.set(0, 1.05, 4.4); lookBase.set(0, 0.95, 0) }
-  if (w / h < 1.0) { robot.root.position.set(0.78, 1.0, -0.3); robot.root.scale.setScalar(0.4); machine.root.position.set(-0.8, 0.95, -0.3); machine.root.userData.s = 0.4 } else { robot.root.position.set(1.1, 0.42, 0.2); robot.root.scale.setScalar(0.9); machine.root.position.set(-1.2, 0.42, 0.1); machine.root.userData.s = 0.9 }   // portrait: the arm floats higher and smaller so the control bar does not hide it
+  if (w / h < 1.0) { robot.root.position.set(0.78, 1.0, -0.3); robot.root.scale.setScalar(0.4); machine.root.position.set(-0.8, 0.95, -0.3); machine.root.userData.s = 0.4; engine.root.position.set(0, 0.7, -6.5); engine.root.scale.setScalar(0.9) } else { robot.root.position.set(1.1, 0.42, 0.2); robot.root.scale.setScalar(0.9); machine.root.position.set(-1.2, 0.42, 0.1); machine.root.userData.s = 0.9; engine.root.position.set(0.1, -0.2, -5.4); engine.root.scale.setScalar(0.9) }   // portrait: the arm floats higher and smaller so the control bar does not hide it
   if (!closeUp) { camPos.copy(camBase); camLook.copy(lookBase) }
   camera.updateProjectionMatrix()
   moteMat.uniforms.uScale.value = (h * dpr) / 900
@@ -249,6 +254,7 @@ function tick() {
   avatar.update(dt)
   robot.update(dt)
   machine.update(dt, t)
+  engine.update(dt, t)
   hovercar.update(dt)
   stepParticles(dt)
   for (const r of rings) { r.rotation.z += dt * r.userData.speed * fx.ringSpeed * (reducedMotion ? 0.35 : 1) * (r.userData.axis % 2 ? -1 : 1); r.position.y = r.userData.baseY + Math.sin(t * 0.5 + r.userData.axis) * 0.03 }
