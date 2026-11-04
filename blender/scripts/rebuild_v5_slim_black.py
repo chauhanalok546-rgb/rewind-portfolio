@@ -83,9 +83,9 @@ def slim(co):
     leg=sstep(0.12,0.30,z)*(1-sstep(0.92,1.06,z))
     arm=sstep(0.20,0.40,ax)*sstep(1.26,1.40,z)*(1-sstep(1.68,1.80,z))
     cx=np.sign(x)*0.086
-    nx=x*(1-0.24*torso-0.07*neck); ny=y*(1-0.17*torso-0.07*neck)
-    nx=nx+((cx+(x-cx)*0.80)-x)*leg; ny=ny+((-0.01+(y+0.01)*0.80)-y)*leg
-    ny=ny*(1-0.24*arm); nz=z+((1.5+(z-1.5)*0.76)-z)*arm
+    nx=x*(1-0.16*torso-0.05*neck); ny=y*(1-0.11*torso-0.05*neck)
+    nx=nx+((cx+(x-cx)*0.88)-x)*leg; ny=ny+((-0.01+(y+0.01)*0.88)-y)*leg
+    ny=ny*(1-0.15*arm); nz=z+((1.5+(z-1.5)*0.85)-z)*arm
     return np.stack([nx,ny,nz],1)
 
 def apply_to_mesh(o, fn):
