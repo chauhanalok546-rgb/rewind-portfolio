@@ -76,14 +76,16 @@ remove_pockets()
 
 # ---------------------------------------------------------------- 2. slimmer build (body, clothes; shape keys moved the same way)
 def slim(co):
+    """a lean build: narrower chest and shoulders, thinner neck, arms and legs (the photos show a slim, light frame)"""
     x,y,z=co[:,0],co[:,1],co[:,2]; ax=np.abs(x)
-    torso=(1-sstep(0.17,0.30,ax))*sstep(0.95,1.08,z)*(1-sstep(1.50,1.58,z))
+    torso=(1-sstep(0.17,0.38,ax))*sstep(0.95,1.08,z)*(1-sstep(1.50,1.57,z))     # chest, ribs and shoulders, fading out into the arms and the head
+    neck=(1-sstep(0.05,0.09,ax))*sstep(1.50,1.54,z)*(1-sstep(1.56,1.595,z))
     leg=sstep(0.12,0.30,z)*(1-sstep(0.92,1.06,z))
-    arm=sstep(0.20,0.34,ax)*sstep(1.28,1.40,z)*(1-sstep(1.66,1.78,z))
+    arm=sstep(0.20,0.40,ax)*sstep(1.26,1.40,z)*(1-sstep(1.68,1.80,z))
     cx=np.sign(x)*0.086
-    nx=x*(1-0.12*torso); ny=y*(1-0.08*torso)
-    nx=nx+((cx+(x-cx)*0.90)-x)*leg; ny=ny+((-0.01+(y+0.01)*0.90)-y)*leg
-    ny=ny*(1-0.10*arm); nz=z+((1.5+(z-1.5)*0.90)-z)*arm
+    nx=x*(1-0.24*torso-0.07*neck); ny=y*(1-0.17*torso-0.07*neck)
+    nx=nx+((cx+(x-cx)*0.80)-x)*leg; ny=ny+((-0.01+(y+0.01)*0.80)-y)*leg
+    ny=ny*(1-0.24*arm); nz=z+((1.5+(z-1.5)*0.76)-z)*arm
     return np.stack([nx,ny,nz],1)
 
 def apply_to_mesh(o, fn):
@@ -121,6 +123,8 @@ def define_face(co):
 
 apply_to_mesh(body, lambda c: slim(define_face(c)))
 apply_to_mesh(look, slim)
+for n in ('ChronoBand','ChronoCase','ChronoDisplay','CordBracelet','SilverRing','SleevePatch'):      # the wrist pieces follow the thinner arms
+    if n in O: apply_to_mesh(O[n], slim)
 
 # ---------------------------------------------------------------- 4. face texture: strong brows, eye and skin definition
 img=bpy.data.images['face_eyes']; W,H=img.size
