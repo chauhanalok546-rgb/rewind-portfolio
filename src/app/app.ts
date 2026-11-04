@@ -225,6 +225,9 @@ function wireControls() {
   const toggle = (id: string, on: (v: boolean) => void) => { const b = $(id); b.addEventListener('click', () => { const v = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(v)); b.classList.toggle('on', v); on(v) }) }
   toggle('c-cc', (v) => { captionsOn = v; $('sub').classList.toggle('off', !v) })
   toggle('c-snd', (v) => { sfx.setMuted(!v); avatar.setMuted(!v); $('c-snd').textContent = v ? '🔊' : '🔇' })
+  const LEVELS = [1, 1.22, 1.45]
+  const cycleZoom = () => { const i = (LEVELS.indexOf(stage.getZoom()) + 1) % LEVELS.length; stage.setZoom(LEVELS[i]); toast(i === 0 ? 'Zoom: fit' : `Zoom out ${i}`) }
+  $('c-zoom').addEventListener('click', cycleZoom)
   $('c-theme').addEventListener('click', () => stage.setTheme((stage.getTheme() === 'cinematic' ? 'lab' : 'cinematic') as Theme))
   $('c-play').addEventListener('click', () => film.toggle())
   $('c-prev').addEventListener('click', () => film.prev())
@@ -237,6 +240,7 @@ function wireControls() {
       if (e.key === 'r' || e.key === 'R') film.replay()
     }
     if (e.key === 'Escape' && state === 'ASK') sayNo()
+    if ((e.key === '-' || e.key === '=') && !e.metaKey && !e.ctrlKey) { e.preventDefault(); if (e.key === '-') stage.setZoom(Math.min(1.45, stage.getZoom() + 0.22)); else stage.setZoom(Math.max(1, stage.getZoom() - 0.22)) }
     if ((e.key === 'c' || e.key === 'C') && !e.metaKey && !e.ctrlKey) $('c-cc').click()
     if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey) $('c-snd').click()
     if ((e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey && !($('c-mic') as HTMLButtonElement).disabled) $('c-mic').click()

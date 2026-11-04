@@ -221,6 +221,7 @@ export function teleport(dir: 'out' | 'in', ms = 1200): Promise<void> {
 export function setAvatarVisible(v: boolean) { applyClip(); avatar.root.visible = v; setClip(v ? 5 : -5) }
 
 let closeUp = false
+let userZoom = 1, baseFov = 28
 const camBase = new THREE.Vector3(0, 1.05, 4.4), lookBase = new THREE.Vector3(0, 0.95, 0)
 const camPos = camBase.clone(), camLook = lookBase.clone()
 const camNow = camPos.clone(), lookNow = camLook.clone()
@@ -231,16 +232,26 @@ export function setCloseUp(v: boolean) {
   else { camPos.copy(camBase); camLook.copy(lookBase) }
 }
 export const isCloseUp = () => closeUp
+/** manual zoom-out for small windows: 1 = fit, up to 1.45 = pulled well back */
+export function setZoom(z: number) { userZoom = z; resize() }
+export const getZoom = () => userZoom
 
 function resize() {
   const w = innerWidth, h = innerHeight
   const dpr = Math.min(devicePixelRatio, dprCap)
   renderer.setPixelRatio(dpr); renderer.setSize(w, h, false)
   camera.aspect = w / h
-  camera.fov = w / h < 0.7 ? 38 : 28
-  // portrait phones: pull back and look higher so the avatar sits in the lower part of the screen (cards go above him)
-  if (w / h < 1.0) { camBase.set(0, 1.25, 5.3); lookBase.set(0, 1.62, 0) } else { camBase.set(0, 1.05, 4.4); lookBase.set(0, 0.95, 0) }
-  if (w / h < 1.0) { robot.root.position.set(0.78, 1.0, -0.3); robot.root.scale.setScalar(0.4); machine.root.position.set(-0.8, 0.95, -0.3); machine.root.userData.s = 0.4; engine.root.position.set(0, 0.7, -6.5); engine.root.scale.setScalar(0.9) } else { robot.root.position.set(1.1, 0.42, 0.2); robot.root.scale.setScalar(0.9); machine.root.position.set(-1.2, 0.42, 0.1); machine.root.userData.s = 0.9; engine.root.position.set(0.1, -0.2, -5.4); engine.root.scale.setScalar(0.9) }   // portrait: the arm floats higher and smaller so the control bar does not hide it
+  // fit the whole set: the sides of the scene (dog, arm, machines) span about +/-2 world units, so pull back and widen the lens for narrower windows
+  const a = w / h, SPAN = 2.05
+  if (a >= 1.6) { camera.fov = 28; camBase.set(0, 1.05, 4.4); lookBase.set(0, 0.95, 0) }
+  else {
+    camera.fov = a < 0.7 ? 46 : a < 1.2 ? 40 : 34
+    const th = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+    camBase.set(0, a < 1 ? 1.3 : 1.15, Math.max(4.4, SPAN / (th * a))); lookBase.set(0, a < 1 ? 1.35 : 1.05, 0)
+  }
+  baseFov = camera.fov
+  camBase.z *= userZoom; camBase.y *= 0.5 + 0.5 * userZoom; lookBase.y *= 0.5 + 0.5 * userZoom
+  if (w / h < 0.75) { robot.root.position.set(0.78, 1.0, -0.3); robot.root.scale.setScalar(0.4); machine.root.position.set(-0.8, 0.95, -0.3); machine.root.userData.s = 0.4; engine.root.position.set(0, 0.7, -6.5); engine.root.scale.setScalar(0.9) } else { robot.root.position.set(1.1, 0.42, 0.2); robot.root.scale.setScalar(0.9); machine.root.position.set(-1.2, 0.42, 0.1); machine.root.userData.s = 0.9; engine.root.position.set(0.1, -0.2, -5.4); engine.root.scale.setScalar(0.9) }   // portrait: the arm floats higher and smaller so the control bar does not hide it
   if (!closeUp) { camPos.copy(camBase); camLook.copy(lookBase) }
   camera.updateProjectionMatrix()
   moteMat.uniforms.uScale.value = (h * dpr) / 900
@@ -280,8 +291,8 @@ function tick() {
   if (fx.warp > 0.001) {                                           // time-warp: the lens stretches and the camera shakes
     const sh = fx.warp * 0.05
     camera.position.x += (Math.random() - 0.5) * sh; camera.position.y += (Math.random() - 0.5) * sh
-    camera.fov = (innerWidth / innerHeight < 0.7 ? 38 : 28) + fx.warp * 22; camera.updateProjectionMatrix(); warped = true
-  } else if (warped) { camera.fov = innerWidth / innerHeight < 0.7 ? 38 : 28; camera.updateProjectionMatrix(); warped = false }
+    camera.fov = baseFov + fx.warp * 22; camera.updateProjectionMatrix(); warped = true
+  } else if (warped) { camera.fov = baseFov; camera.updateProjectionMatrix(); warped = false }
   camera.lookAt(lookNow)
   renderer.render(scene, camera)
   frames++; fpsT += dt
@@ -302,7 +313,7 @@ export async function loadStage(onProgress: (f: number) => void) {
 }
 tick()
 
-export const stage = { avatar, narrator, dog, robot, machine, hovercar, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
+export const stage = { setZoom, getZoom, avatar, narrator, dog, robot, machine, hovercar, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
 ;(window as unknown as Record<string, unknown>).__stage = stage
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
 ;(window as unknown as Record<string, unknown>).__narrator = narrator
