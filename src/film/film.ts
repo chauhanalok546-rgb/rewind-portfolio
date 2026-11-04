@@ -4,6 +4,7 @@ import { stage } from '../stage'
 import { sfx } from '../audio/sfx'
 import { music, type Mood } from '../audio/music'
 import { tunnel } from './tunnel'
+import { warmVideo } from './warm'
 import { $, animateYear, log, reduced, setPlace, setSignal, setStatus, setYearInstant, shockwave } from '../app/hud'
 
 /** The film: ONE GSAP master timeline with a label per scene (scene0 .. scene6), so buttons and keys can jump, pause, skip and replay.
@@ -53,7 +54,12 @@ function disposeScene() {
 
 const warmed = new Set<string>()
 function prefetch(i: number) {
-  for (const id of SCENES[i]?.lines ?? []) { if (warmed.has(id)) continue; warmed.add(id); void fetch(`/audio/narration/${id}.mp3`).catch(() => warmed.delete(id)) }
+  for (const id of SCENES[i]?.lines ?? []) {
+    if (warmed.has(id)) continue; warmed.add(id)
+    avatar.preloadAudio(`/audio/narration/${id}.mp3`)                          // a ready-to-play element: no fetch, decode or element set-up when the line starts
+    void fetch(`/audio/narration/cues/${id}.json`).catch(() => undefined)
+  }
+  if (i >= 1 && i <= 5) warmVideo(`scene${i}`)
 }
 
 function enterScene(i: number) {
@@ -61,7 +67,7 @@ function enterScene(i: number) {
   disposeScene()
   current = i; ended = false
   document.documentElement.dataset.scene = def.id
-  prefetch(i); prefetch(i + 1)
+  prefetch(i); prefetch(i + 1); prefetch(i + 2)
   const els: HTMLElement[] = []
   const tl = gsap.timeline()
   live = { els, tl }
@@ -88,7 +94,7 @@ function enterScene(i: number) {
   setPlace(def.place); setSignal(i === 0 ? '12%' : i === 5 ? '88%' : '100%')
   setStatus('Playing')
   gsap.to(stage.fx, { warp: 0, duration: 0.7 })
-  music.play(def.music)
+  setTimeout(() => { if (current === i) music.play(def.music) }, 350)       // building the synth bed is not free: a beat after the scene's first frames
   stage.setAmbience(def.id === 'scene0' || def.id === 'scene6' ? 'lobby' : def.id)
   tunnel.stop(900)
   def.enter(ctx)

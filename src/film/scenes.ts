@@ -3,6 +3,7 @@ import type { Mood } from '../audio/music'
 import { reduced, setSignal } from '../app/hud'
 import { Vector3 } from 'three'
 import { stage } from '../stage'
+import { takeVideo } from './warm'
 
 export interface SceneCtx {
   id: string
@@ -31,8 +32,9 @@ export interface SceneDef {
 function backdrop(set: HTMLElement, name: string) {
   const nav = navigator as Navigator & { connection?: { saveData?: boolean } }
   if (reduced || nav.connection?.saveData) return
-  const v = document.createElement('video')
-  v.className = 'bgvid'; v.src = `/video/${name}.mp4`; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.setAttribute('aria-hidden', 'true')
+  const v = takeVideo(name) ?? document.createElement('video')                    // normally an element that was loaded and decoded earlier
+  if (!v.src) { v.className = 'bgvid'; v.src = `/video/${name}.mp4`; v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('aria-hidden', 'true') }
+  v.autoplay = true; v.currentTime = 0
   v.addEventListener('playing', () => set.classList.add('has-video'), { once: true })
   v.addEventListener('error', () => v.remove(), { once: true })
   set.prepend(v); void v.play().catch(() => v.remove())

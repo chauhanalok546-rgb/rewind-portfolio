@@ -310,6 +310,13 @@ export async function loadStage(onProgress: (f: number) => void) {
     if (o.name === 'ChronoDisplay') { const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial; if (m && 'emissiveIntensity' in m) chronoMats.push(m) }
   })
   setCloseUp(false)
+  // warm-up: switch the dissolve's clipping on now (it recompiles every avatar shader, a 150 ms hitch the first time he teleports) and compile
+  // everything that appears later (machine, hover-car, particles) while the loading screen is still up
+  applyClip(); setClip(5)
+  const hidden = [machine.root, hovercar.root, engine.root, robot.root, dog.root].filter((o) => !o.visible)
+  hidden.forEach((o) => { o.visible = true })
+  try { renderer.compile(scene, camera) } catch { /* the first real frame will compile instead */ }
+  hidden.forEach((o) => { o.visible = false })
 }
 tick()
 

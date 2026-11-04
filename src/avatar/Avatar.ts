@@ -291,6 +291,12 @@ export class Avatar {
   stop() { this.epoch++; this.audio?.pause(); this.cues = []; this.analyserMode = false }
 
   /** Plays any audio and lip-syncs it from the sound itself (loudness drives the jaw, brightness picks the mouth shape). */
+  private warmAudio = new Map<string, HTMLAudioElement>()
+  /** create the audio element for a clip ahead of time (it starts loading and decoding now) */
+  preloadAudio(url: string) {
+    if (this.warmAudio.has(url)) return
+    const el = new Audio(); el.crossOrigin = 'anonymous'; el.preload = 'auto'; el.src = url; el.load(); this.warmAudio.set(url, el)
+  }
   async speakAudio(audioUrl: string): Promise<void> {
     const ep = ++this.epoch
     // pre-computed mouth-shape cues (from the speech engine's word timings) sit next to every shipped clip: /x/line.mp3 -> /x/cues/line.json
@@ -303,7 +309,9 @@ export class Avatar {
     return new Promise<void>((resolve) => {
       this.audio?.pause()
       this.cues = cues; this.cueIdx = 0
-      const el = new Audio(audioUrl)
+      const warm = this.warmAudio.get(audioUrl); this.warmAudio.delete(audioUrl)
+      const el = warm ?? new Audio(audioUrl)
+      if (warm) warm.currentTime = 0
       el.crossOrigin = 'anonymous'
       el.muted = this.muted; el.volume = this.duckLevel
       this.audio = el
