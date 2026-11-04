@@ -9,10 +9,18 @@ import base64, json, os, subprocess, sys, tempfile, time, urllib.request, urllib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lipsync
 os.environ["PATH"] = "/opt/homebrew/bin:" + os.environ["PATH"]
+def _env_file():
+    """read KEY=value lines from rewind/.env.local (git-ignored) so the key never has to be typed into a command or a chat"""
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env.local")
+    if os.path.exists(p):
+        for ln in open(p):
+            if "=" in ln and not ln.lstrip().startswith("#"):
+                k, v = ln.strip().split("=", 1); os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+_env_file()
 KEY = os.environ.get("ELEVENLABS_API_KEY")
 VOICE = os.environ.get("ELEVENLABS_VOICE_ID", "4N8zjn9tVNuDEBFWVHAq")
 MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_multilingual_v2")
-if not KEY: sys.exit("Set ELEVENLABS_API_KEY in the environment first.")
+if not KEY: sys.exit("No key found: put ELEVENLABS_API_KEY=... in rewind/.env.local (or the environment).")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANSWERS = "--answers" in sys.argv
 OUT = os.path.join(ROOT, "public/audio/answers" if ANSWERS else "public/audio/narration")
