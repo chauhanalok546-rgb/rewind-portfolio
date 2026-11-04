@@ -80,6 +80,8 @@ function enterScene(i: number) {
     banner,
   }
   // where the avatar stands
+  avatar.setAutonomous(def.avatar === 'lobby')
+  if (def.id !== 'scene6') stage.machine.setActive(false)
   if (def.avatar === 'lobby') { stage.setLobbyVisible(true, i === 0 ? 0 : 900); stage.setAvatarPose(0, 0, i === 0 ? 0 : 0); if (i > 0) void stage.teleport('in', 1100) }
   else { stage.setLobbyVisible(false, 600); stage.setAvatarPose(innerWidth / innerHeight < 1.0 ? 0 : def.avatar.x * Math.min(1, innerWidth / innerHeight / 1.6), innerWidth / innerHeight < 1.0 ? 0 : def.avatar.yaw, 0); void stage.teleport('in', 1100) }
   void animateYear(def.year, reduced ? 0 : 600)

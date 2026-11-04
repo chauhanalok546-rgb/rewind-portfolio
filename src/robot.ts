@@ -25,6 +25,14 @@ export function createRobot() {
   const ring = mesh(new THREE.TorusGeometry(0.22, 0.009, 8, 64), led, root); ring.rotation.x = Math.PI / 2; ring.position.y = 0.102
   mesh(new THREE.CylinderGeometry(0.13, 0.16, SHOULDER_Y - 0.1, 28), amber, root).position.y = (SHOULDER_Y + 0.1) / 2
 
+  // work cell: two glowing pads and a cube the arm shuttles between them, forever
+  const PAD_A = new THREE.Vector3(0.58, 0.02, 0.3), PAD_B = new THREE.Vector3(0.58, 0.02, -0.3)
+  for (const p of [PAD_A, PAD_B]) {
+    const pad = mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.03, 32), graphite, root); pad.position.set(p.x, p.y - 0.015, p.z)
+    const pr = mesh(new THREE.TorusGeometry(0.1, 0.006, 8, 40), led, root); pr.rotation.x = Math.PI / 2; pr.position.set(p.x, p.y + 0.002, p.z)
+  }
+  const cube = mesh(new THREE.BoxGeometry(0.075, 0.075, 0.075), amber, root); cube.position.copy(PAD_A).y += 0.04
+  mesh(new THREE.BoxGeometry(0.079, 0.012, 0.079), led, cube).position.y = 0.0
   const yaw = new THREE.Group(); yaw.position.y = SHOULDER_Y; root.add(yaw)
   joint(yaw, 0.1)
   const upper = new THREE.Group(); yaw.add(upper); limb(upper, L1, 0.1)
@@ -35,7 +43,7 @@ export function createRobot() {
   const pointLight = new THREE.PointLight('#00b4ff', 0.6, 1.4); pointLight.position.set(0.1, 0.05, 0.1); wrist.add(pointLight)
 
   const target = new THREE.Vector3(0.4, 0.62, 0.15), goal = target.clone(), vel = new THREE.Vector3()
-  let mode: 'idle' | 'reach' = 'idle', grip = 0.7, gripGoal = 0.7, timer = 0, hold = 0
+  let mode: 'idle' | 'reach' = 'idle', fired = false, step = 0, stepT = 0, carrying = false, from = PAD_A, to = PAD_B, grip = 0.7, gripGoal = 0.7, timer = 0, hold = 0
   const world = new THREE.Vector3()
 
   function solve(tl: THREE.Vector3) {
@@ -57,10 +65,27 @@ export function createRobot() {
     /** a quick press: jab forward and back */
     press(local: THREE.Vector3) { goal.copy(local); mode = 'reach'; hold = 0.35; timer = 0; gripGoal = 0 },
     localFromWorld(w: THREE.Vector3) { return root.worldToLocal(world.copy(w)) },
-    update(dt: number, t: number) {
+    update(dt: number) {
       timer += dt
       if (mode === 'reach' && timer > hold + 0.6) { mode = 'idle'; gripGoal = 0.7 }
-      if (mode === 'idle') goal.set(0.42 + Math.sin(t * 0.5) * 0.06, 0.64 + Math.sin(t * 0.8) * 0.05, 0.1 + Math.sin(t * 0.31) * 0.14)
+      if (mode === 'idle') {
+        // pick-and-place: hover over the cube, lower, grip, lift, carry, lower, release, lift, then back the other way
+        stepT += dt
+        const hover = 0.34, low = 0.17
+        const at = (p: THREE.Vector3, y: number) => goal.set(p.x - 0.08, y, p.z)
+        const STEPS: Array<[number, () => void]> = [
+          [0.9, () => { at(from, hover); gripGoal = 0.8 }],
+          [0.7, () => at(from, low)],
+          [0.5, () => { gripGoal = 0.05; if (!carrying) { carrying = true; wrist.attach(cube); cube.position.set(0.15, -0.045, 0); cube.rotation.set(0, 0, 0) } }],
+          [0.7, () => at(from, hover)],
+          [1.0, () => at(to, hover)],
+          [0.7, () => at(to, low)],
+          [0.5, () => { gripGoal = 0.8; if (carrying) { carrying = false; root.attach(cube); cube.position.copy(to).y += 0.04; cube.rotation.set(0, 0, 0) } }],
+          [0.6, () => { at(to, hover); const tmp = from; from = to; to = tmp }],
+        ]
+        if (!fired) { fired = true; STEPS[step][1]() }
+        else if (stepT >= STEPS[step][0]) { step = (step + 1) % STEPS.length; stepT = 0; fired = false }
+      }
       // critically damped follow (spring), so the arm eases in and out
       const k = 40, c = 2 * Math.sqrt(k)
       vel.x += ((goal.x - target.x) * k - vel.x * c) * dt; vel.y += ((goal.y - target.y) * k - vel.y * c) * dt; vel.z += ((goal.z - target.z) * k - vel.z * c) * dt

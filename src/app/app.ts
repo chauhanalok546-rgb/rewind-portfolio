@@ -74,6 +74,7 @@ async function lobby() {
   setState('LOBBY')
   $('app').classList.remove('hidden')
   setStatus('Standby')
+  avatar.setAutonomous(true)                       // from now on the twin wanders, glances around and gestures by itself
   log('Audio channel open ✓')
   await wait(2400)                                 // the avatar idles and glances around first
   void presence()

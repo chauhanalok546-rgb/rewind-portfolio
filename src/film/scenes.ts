@@ -295,6 +295,7 @@ const scene6: SceneDef = {
   id: 'scene6', year: 2026, place: 'Pune, IN', lines: ['s6_1', 's6_2', 's6_3'], music: 'calm', avatar: 'lobby',
   enter(c) {
     c.banner('Return to present', '2026')
+    c.tl.call(() => stage.machine.setActive(true), [], c.at(1, 0.5))
     // ARM-01 builds the sentence from scattered words
     const words = ["Let's", 'build', 'something.']
     const arm = c.add<HTMLElement>(`<div class="prop sentence right"><div class="scatter"></div><div class="built mono"></div></div>`)

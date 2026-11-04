@@ -4,6 +4,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { Avatar } from './avatar/Avatar'
 import { Narrator } from './voice/Narrator'
 import { createRobot } from './robot'
+import { createMachine } from './machine'
 
 export type Theme = 'cinematic' | 'lab'
 
@@ -91,8 +92,12 @@ const narrator = new Narrator(avatar)
 
 // ARM-01, the robotic arm: stands beside the avatar in the lobby and on the end card
 const robot = createRobot()
-robot.root.position.set(1.1, 0.42, 0.2); robot.root.rotation.y = -0.35; robot.root.scale.setScalar(0.9)
+robot.root.position.set(1.1, 0.42, 0.2); robot.root.rotation.y = -2.5; robot.root.scale.setScalar(0.9)
 scene.add(robot.root)
+// BUILDER-01, the machine that powers up on the end card
+const machine = createMachine()
+machine.root.position.set(-1.2, 0.42, 0.1); machine.root.rotation.y = 0.5
+scene.add(machine.root)
 
 /** Knobs the app turns: ring speed, glow flare (snap), chronometer glow, mote speed. */
 export const fx = { ringSpeed: 1, flare: 0, chrono: 0, motes: 1 }
@@ -139,6 +144,7 @@ export function setAmbience(kind: string) {
   gsap.to(fx, { motes: a.speed, duration: 1.2 }); gsap.to(moteMat.uniforms.uSize, { value: a.size, duration: 1.2 })
 }
 export function setAvatarPose(x: number, yaw: number, ms: number) {
+  avatar.stopWalk(); avatar.root.position.z = 0; avatar.root.position.y = 0
   if (ms <= 0) { avatar.root.position.x = x; avatar.root.rotation.y = yaw; return }
   gsap.to(avatar.root.position, { x, duration: ms / 1000, ease: 'power3.inOut' })
   gsap.to(avatar.root.rotation, { y: yaw, duration: ms / 1000, ease: 'power3.inOut' })
@@ -214,7 +220,7 @@ function resize() {
   camera.fov = w / h < 0.7 ? 38 : 28
   // portrait phones: pull back and look higher so the avatar sits in the lower part of the screen (cards go above him)
   if (w / h < 1.0) { camBase.set(0, 1.25, 5.3); lookBase.set(0, 1.62, 0) } else { camBase.set(0, 1.05, 4.4); lookBase.set(0, 0.95, 0) }
-  if (w / h < 1.0) { robot.root.position.set(0.66, 1.0, 0.1); robot.root.scale.setScalar(0.55) } else { robot.root.position.set(1.1, 0.42, 0.2); robot.root.scale.setScalar(0.9) }   // portrait: the arm floats higher and smaller so the control bar does not hide it
+  if (w / h < 1.0) { robot.root.position.set(0.78, 1.0, -0.3); robot.root.scale.setScalar(0.4); machine.root.position.set(-0.8, 0.95, -0.3); machine.root.userData.s = 0.4 } else { robot.root.position.set(1.1, 0.42, 0.2); robot.root.scale.setScalar(0.9); machine.root.position.set(-1.2, 0.42, 0.1); machine.root.userData.s = 0.9 }   // portrait: the arm floats higher and smaller so the control bar does not hide it
   if (!closeUp) { camPos.copy(camBase); camLook.copy(lookBase) }
   camera.updateProjectionMatrix()
   moteMat.uniforms.uScale.value = (h * dpr) / 900
@@ -234,7 +240,8 @@ function tick() {
   const now = performance.now(); const dt = Math.min((now - prevT) / 1000, 0.05); prevT = now; elapsed += dt
   const t = elapsed
   avatar.update(dt)
-  robot.update(dt, t)
+  robot.update(dt)
+  machine.update(dt, t)
   stepParticles(dt)
   for (const r of rings) { r.rotation.z += dt * r.userData.speed * fx.ringSpeed * (reducedMotion ? 0.35 : 1) * (r.userData.axis % 2 ? -1 : 1); r.position.y = r.userData.baseY + Math.sin(t * 0.5 + r.userData.axis) * 0.03 }
   moteMat.uniforms.uTime.value = t; moteMat.uniforms.uSpeed.value = fx.motes
@@ -266,7 +273,7 @@ export async function loadStage(onProgress: (f: number) => void) {
 }
 tick()
 
-export const stage = { avatar, narrator, robot, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
+export const stage = { avatar, narrator, robot, machine, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
 ;(window as unknown as Record<string, unknown>).__stage = stage
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
 ;(window as unknown as Record<string, unknown>).__narrator = narrator

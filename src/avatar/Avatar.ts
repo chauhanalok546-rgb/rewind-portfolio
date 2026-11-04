@@ -12,7 +12,7 @@ const EXPRESSIONS: Record<Expression, Record<string, number>> = {
   proud: { mouthSmileLeft: 0.2, mouthSmileRight: 0.2, browOuterUpLeft: 0.2, browOuterUpRight: 0.2, cheekSquintLeft: 0.06, cheekSquintRight: 0.06 },
 }
 
-export type Gesture = 'wave' | 'namaste' | 'snap' | 'thumbs_up' | 'talk1' | 'talk2' | 'present' | 'point'
+export type Gesture = 'wave' | 'namaste' | 'snap' | 'thumbs_up' | 'talk1' | 'talk2' | 'present' | 'point' | 'beat' | 'beatL' | 'open' | 'think'
 
 type V3 = [number, number, number]
 interface ArmPose { arm: V3; fore: V3; hand?: V3; fingers?: number[] }   // fingers: thumb, index, middle, ring, pinky curl 0..1
@@ -37,6 +37,12 @@ const GESTURES: Record<Gesture, GestureDef> = {
     L: { arm: [0.45, -0.8, 0.4], fore: [0.3, 0.15 + osc(t, 0.8) * 0.1, 1], fingers: [0.1, 0.15, 0.2, 0.25, 0.3] },
     R: { arm: [0.45, -0.8, 0.4], fore: [0.3, 0.15 + osc(t + 0.3, 0.8) * 0.1, 1], fingers: [0.1, 0.15, 0.2, 0.25, 0.3] } }) },
   present: { dur: 2.6, fadeIn: 0.7, fadeOut: 0.9, amp: 0.65, pose: () => ({ R: { arm: [0.6, -0.7, 0.4], fore: [0.55, 0.2, 0.8], fingers: [0.05, 0.05, 0.05, 0.05, 0.05] } }) },
+  beat: { dur: 1.5, fadeIn: 0.35, fadeOut: 0.5, amp: 0.7, pose: (t) => ({ R: { arm: [0.42, -0.8, 0.42], fore: [0.3, 0.1 + Math.max(0, osc(t, 1.4)) * 0.35, 0.95], fingers: [0.1, 0.12, 0.2, 0.25, 0.3] } }) },
+  beatL: { dur: 1.5, fadeIn: 0.35, fadeOut: 0.5, amp: 0.7, pose: (t) => ({ L: { arm: [0.42, -0.8, 0.42], fore: [0.3, 0.1 + Math.max(0, osc(t, 1.4)) * 0.35, 0.95], fingers: [0.1, 0.12, 0.2, 0.25, 0.3] } }) },
+  open: { dur: 2.4, fadeIn: 0.5, fadeOut: 0.7, amp: 0.7, pose: (t) => ({
+    L: { arm: [0.62, -0.7, 0.3], fore: [0.7, 0.2 + osc(t, 0.6) * 0.08, 0.7], fingers: [0.05, 0.08, 0.08, 0.1, 0.1] },
+    R: { arm: [0.62, -0.7, 0.3], fore: [0.7, 0.2 + osc(t + 0.2, 0.6) * 0.08, 0.7], fingers: [0.05, 0.08, 0.08, 0.1, 0.1] } }) },
+  think: { dur: 2.6, fadeIn: 0.6, fadeOut: 0.8, amp: 0.8, pose: () => ({ R: { arm: [0.3, -0.7, 0.62], fore: [-0.2, 0.9, 0.5], fingers: [0.3, 0.7, 0.6, 0.6, 0.6] } }) },
   point: { dur: 2.4, fadeIn: 0.55, fadeOut: 0.65, amp: 1, pose: () => ({ R: { arm: [1, -0.15, 0.25], fore: [1, 0.0, 0.3], fingers: [0.6, 0, 1, 1, 1] } }) },
 }
 const easeInOut = (x: number) => { const t = Math.min(1, Math.max(0, x)); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2 }
@@ -101,6 +107,16 @@ export class Avatar {
   private cueIdx = 0
   private mouth = 0                       // smoothed overall speech amount, drives the head's talking motion
 
+  // ---- autonomy: the twin lives on its own (wanders, glances around, gestures) until it is asked to speak
+  private auto = { on: false, nextAct: 6, walking: false, settle: false, tx: 0, tz: 0, phase: 0, blend: 0, nextLook: 4, lookUntil: 0, lx: 0, ly: 0 }
+  private lastPointer = 0
+  /** tuning for the procedural gait (signs depend on the skeleton's axes) */
+  gait = { thigh: 1, knee: 1, arm: 1, swing: 0.5, speed: 0.5 }
+  setAutonomous(on: boolean) { this.auto.on = on; if (!on) this.stopWalk() }
+  walkTo(x: number, z: number) { this.auto.tx = x; this.auto.tz = z; this.auto.walking = true; this.auto.settle = true }
+  stopWalk() { this.auto.walking = false }
+  get walking() { return this.auto.walking }
+
   cues: VisemeCue[] = []
   audio?: HTMLAudioElement
   /** spring-damped hair: six hair bones lag behind head turns and settle with a little overshoot (off on weak devices) */
@@ -138,7 +154,7 @@ export class Avatar {
     })
     for (const [n, b] of this.bones) this.rest.set(n, b.quaternion.clone())
     this.finishLook(gltf.scene)
-    for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftEye', 'RightEye', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm']) this.bn[n] = this.bones.get(n)
+    for (const n of ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftEye', 'RightEye', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm', 'LeftUpLeg', 'RightUpLeg', 'LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot']) this.bn[n] = this.bones.get(n)
     for (const [n, b] of this.bones) {
       const m = /^Hair(Front|BackL|BackR|Back|L|R)$/.exec(n)
       if (m) this.hair.push({ bone: b, angle: { Front: 0, R: 90, BackR: 135, Back: 180, BackL: -135, L: -90 }[m[1] as 'Front'] * Math.PI / 180, d: new THREE.Vector3(), v: new THREE.Vector3() })
@@ -232,7 +248,7 @@ export class Avatar {
   private lockUntil = 0
   /** Eyes and head turn to the visitor (the camera) and ignore the mouse pointer for a while. */
   lookAtVisitor(x: number, y: number, ms = 6000) { this.lockUntil = performance.now() + ms; this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
-  setLookTarget(x: number, y: number) { if (performance.now() < this.lockUntil) return; this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
+  setLookTarget(x: number, y: number) { this.lastPointer = performance.now(); if (performance.now() < this.lockUntil) return; this.target.set(THREE.MathUtils.clamp(x, -1, 1), THREE.MathUtils.clamp(y, -1, 1)) }
   blinkNow(duration = 0.16) { if (this.blinkT < 0) { this.blinkT = 0; this.blinkDur = duration } }
 
   /** browser speech voice has no audio to analyse: a simple syllable-rate jaw flap stands in */
@@ -293,19 +309,54 @@ export class Avatar {
     // ---- body life: breathing drives chest, shoulders and a hint of head; weight shift on the hips
     const breath = Math.sin(t * 1.55) * 0.5 + 0.5                // 0..1
     this.layer('Spine', 0, Math.sin(t * 0.33) * 0.012, Math.sin(t * 0.21 + 1) * 0.006)
-    this.layer('Spine1', breath * 0.006, 0, 0)
     this.layer('Spine2', breath * 0.011, Math.sin(t * 0.33 + 0.5) * -0.008, Math.sin(t * 0.5) * 0.004)
     this.layer('LeftShoulder', 0, 0, breath * 0.012)
     this.layer('RightShoulder', 0, 0, -breath * 0.012)
     this.weightT -= dt
     if (this.weightT <= 0) { this.weightT = 6 + Math.random() * 4; this.weightShiftTarget = (Math.random() < 0.5 ? -1 : 1) * 0.011 }
-    this.layer('Hips', Math.sin(t * 0.27) * 0.004, 0, this.weightShift.step(this.weightShiftTarget, 1.1, dt))
+    const A = this.auto, G = this.gait
+    if (A.on && this.root.visible) {
+      const free = !speaking && !this.gesture
+      if (speaking) A.walking = false
+      A.nextAct -= dt
+      if (A.nextAct <= 0 && free && !A.walking) {                 // every so often: stroll, glance around or gesture
+        A.nextAct = 6 + Math.random() * 7
+        const r = Math.random()
+        if (r < 0.5) this.walkTo(-0.55 + Math.random() * 0.8, -0.1 + Math.random() * 0.55)
+        else if (r < 0.8) this.play((['talk2', 'open', 'beat', 'think', 'present'] as Gesture[])[Math.floor(Math.random() * 5)])
+        else A.lookUntil = performance.now() + 2200
+      }
+      if (A.walking) {
+        const dx = A.tx - this.root.position.x, dz = A.tz - this.root.position.z, dist = Math.hypot(dx, dz)
+        if (dist < 0.04) A.walking = false
+        else {
+          const step = Math.min(dist, G.speed * dt)
+          this.root.position.x += (dx / dist) * step; this.root.position.z += (dz / dist) * step
+          A.phase += dt * G.speed * 7.4
+          const want = Math.atan2(dx, dz); let d = want - this.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d))
+          this.root.rotation.y += d * (1 - Math.exp(-6 * dt))
+        }
+      } else if (A.settle) {                                         // arrived: turn back to face the visitor
+        let d = -this.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d))
+        this.root.rotation.y += d * (1 - Math.exp(-4 * dt))
+        if (Math.abs(d) < 0.02) { this.root.rotation.y = 0; A.settle = false }
+      }
+    } else A.walking = false
+    A.blend = damp(A.blend, A.walking ? 1 : 0, 6, dt)
+    const wb = A.blend, ws = Math.sin(A.phase), wc = Math.cos(A.phase)
+    this.root.position.y = Math.abs(wc) * 0.014 * wb
+    this.layer('Hips', Math.sin(t * 0.27) * 0.004 + wb * 0.03, wb * ws * 0.09, this.weightShift.step(this.weightShiftTarget, 1.1, dt) + wb * wc * 0.03)
+    this.layer('LeftUpLeg', G.thigh * ws * G.swing * wb, 0, 0); this.layer('RightUpLeg', -G.thigh * ws * G.swing * wb, 0, 0)
+    this.layer('LeftLeg', G.knee * Math.max(0, wc) * 0.75 * wb * (ws > 0 ? 1 : 0.3), 0, 0); this.layer('RightLeg', G.knee * Math.max(0, -wc) * 0.75 * wb * (ws < 0 ? 1 : 0.3), 0, 0)
+    this.layer('LeftFoot', -G.thigh * ws * G.swing * 0.35 * wb, 0, 0); this.layer('RightFoot', G.thigh * ws * G.swing * 0.35 * wb, 0, 0)
+    this.layer('Spine1', breath * 0.006, -wb * ws * 0.07, 0)
 
     this.updateGesture(dt, speaking)
     if (this.gestureBlend <= 0 && !this.gesture) {
       // relaxed arms are never dead still: a very small pendulum
-      this.layer('LeftArm', Math.sin(t * 0.9) * 0.012, 0, Math.sin(t * 0.7 + 1) * 0.008)
-      this.layer('RightArm', Math.sin(t * 0.9 + 1.4) * 0.012, 0, Math.sin(t * 0.7) * 0.008)
+      const sw = this.gait.arm * this.auto.blend * Math.sin(this.auto.phase) * 0.32
+      this.layer('LeftArm', Math.sin(t * 0.9) * 0.012 - sw, 0, Math.sin(t * 0.7 + 1) * 0.008)
+      this.layer('RightArm', Math.sin(t * 0.9 + 1.4) * 0.012 + sw, 0, Math.sin(t * 0.7) * 0.008)
       this.layer('LeftForeArm', Math.sin(t * 0.8 + 0.4) * 0.01, 0, 0)
       this.layer('RightForeArm', Math.sin(t * 0.8 + 1.9) * 0.01, 0, 0)
     }
@@ -320,6 +371,10 @@ export class Avatar {
     }
     const driftX = Math.sin(t * 0.41) * 0.03 + Math.sin(t * 0.93) * 0.012
     const driftY = Math.sin(t * 0.53 + 1) * 0.02
+    if (this.auto.on && performance.now() - this.lastPointer > 3500 && performance.now() > this.lockUntil) {
+      if (performance.now() < this.auto.lookUntil) { if (this.auto.ly === 0) { this.auto.lx = (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.5); this.auto.ly = (Math.random() - 0.3) * 0.5 + 0.001 } this.target.set(this.auto.lx, this.auto.ly) }
+      else { this.auto.ly = 0; this.target.set(0, 0.04) }
+    }
     const ex = this.eyeX.step(this.target.x, 0.14, dt), ey = this.eyeY.step(this.target.y, 0.14, dt)
     const hx = this.headX.step(this.target.x, 0.42, dt), hy = this.headY.step(this.target.y, 0.46, dt)
     const yaw = (hx + driftX) * MAX_YAW
@@ -463,8 +518,9 @@ export class Avatar {
     if (speaking && !this.gesture) {                       // an unhurried talking gesture every few seconds
       this.nextTalkGesture -= dt
       if (this.nextTalkGesture <= 0) {
-        this.nextTalkGesture = 3 + Math.random() * 3
-        this.play((['talk1', 'talk2', 'present'] as Gesture[])[Math.floor(Math.random() * 3)])
+        this.nextTalkGesture = 1.6 + Math.random() * 2.2
+        const set: Gesture[] = ['talk1', 'talk2', 'present', 'beat', 'beatL', 'open', 'beat']
+        this.play(set[Math.floor(Math.random() * set.length)])
       }
     }
     let w = 0
