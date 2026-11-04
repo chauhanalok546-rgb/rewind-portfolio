@@ -16,7 +16,7 @@
    "id": "greet_ringo",
    "speaker": "ALOK",
    "scene": "lobby",
-   "gesture": "point",
+   "gesture": "talk",
    "text": "And this is Ringo, my robot dog. He's my partner in time travel, so wherever I go, he comes along. Say hi, Ringo.",
    "duration": 7.25
   },

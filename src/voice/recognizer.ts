@@ -28,7 +28,7 @@ export class Recognizer {
     const r = new Ctor()
     r.lang = this.lang; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1
     r.onstart = () => this.set('listening')
-    r.onresult = (e) => { for (let i = e.resultIndex; i < e.results.length; i++) { const res = e.results[i]; if (res.isFinal) this.onFinal?.(res[0].transcript); else this.onInterim?.(res[0].transcript) } }
+    r.onresult = (e) => { this.errors = 0; for (let i = e.resultIndex; i < e.results.length; i++) { const res = e.results[i]; if (res.isFinal) this.onFinal?.(res[0].transcript); else this.onInterim?.(res[0].transcript) } }
     r.onerror = (e) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { this.wantOn = false; this.set('blocked') }
       else if (e.error === 'language-not-supported' && this.lang !== 'en-US') this.lang = 'en-US'

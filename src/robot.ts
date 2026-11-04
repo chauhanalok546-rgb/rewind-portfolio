@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { mergeStatic } from './mergeStatic'
 
 /** ARM-01: an articulated robotic arm (base yaw, shoulder, elbow, wrist, two-finger gripper) driven by a small two-link IK solver.
  *  It idles with a slow sway, can reach for a point, press a button, wave and "write" (tap along a line). All motion is critically damped. */
@@ -8,7 +9,7 @@ const graphite = new THREE.MeshStandardMaterial({ color: '#141c2c', metalness: 0
 const steel = new THREE.MeshStandardMaterial({ color: '#aab6c8', metalness: 0.9, roughness: 0.25 })
 const led = new THREE.MeshBasicMaterial({ color: new THREE.Color('#00b4ff').multiplyScalar(2.8), toneMapped: false })
 
-const mesh = (g: THREE.BufferGeometry, m: THREE.Material, parent: THREE.Object3D) => { const o = new THREE.Mesh(g, m); o.castShadow = true; parent.add(o); return o }
+const mesh = (g: THREE.BufferGeometry, m: THREE.Material, parent: THREE.Object3D) => { const o = new THREE.Mesh(g, m); o.castShadow = false; parent.add(o); return o }
 function limb(parent: THREE.Object3D, len: number, w: number) {
   const b = mesh(new THREE.BoxGeometry(len, w, w * 1.1), amber, parent); b.position.x = len / 2
   mesh(new THREE.BoxGeometry(len * 0.8, w * 0.35, w * 1.16), graphite, parent).position.set(len / 2, 0, 0)       // dark inset panel
@@ -42,6 +43,8 @@ export function createRobot() {
   const fingers = [1, -1].map((s) => { const f = mesh(new THREE.BoxGeometry(0.1, 0.014, 0.02), steel, wrist); f.position.set(0.09, 0, 0.02 * s); return f })
   const pointLight = new THREE.PointLight('#00b4ff', 0.6, 1.4); pointLight.position.set(0.1, 0.05, 0.1); wrist.add(pointLight)
 
+  // merge the rigid pieces of each link (the moving groups stay separate)
+  mergeStatic(upper, [fore]); mergeStatic(fore, [wrist]); mergeStatic(wrist, [...fingers, pointLight]); mergeStatic(yaw, [upper])
   const target = new THREE.Vector3(0.4, 0.62, 0.15), goal = target.clone(), vel = new THREE.Vector3()
   let mode: 'idle' | 'reach' = 'idle', fired = false, step = 0, stepT = 0, carrying = false, from = PAD_A, to = PAD_B, grip = 0.7, gripGoal = 0.7, timer = 0, hold = 0
   const world = new THREE.Vector3()

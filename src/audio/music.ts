@@ -6,6 +6,7 @@ export type Mood = 'lab' | 'glitch' | 'piano' | 'strings' | 'crowd' | 'silence' 
 let bus: GainNode | null = null
 let current: { stop: () => void } | null = null
 let duckTimer = 0
+let barge = false
 let isSpeaking: () => boolean = () => false
 
 const noiseSrc = (c: AudioContext) => {
@@ -56,6 +57,8 @@ const BEDS: Record<Mood, (c: AudioContext, out: AudioNode) => () => void> = {
 
 export const music = {
   setSpeakingProbe(fn: () => boolean) { isSpeaking = fn },
+  /** the visitor is talking over us: music right down */
+  setBarge(v: boolean) { barge = v },
   play(mood: Mood) {
     const { ctx, master } = audioGraph()
     if (!bus) { bus = ctx.createGain(); bus.gain.value = 1; bus.connect(master) }
@@ -63,7 +66,7 @@ export const music = {
     const sub = ctx.createGain(); sub.gain.value = 1; sub.connect(bus)
     const stop = BEDS[mood](ctx, sub)
     current = { stop: () => { stop(); sub.gain.setTargetAtTime(0, ctx.currentTime, 0.4) } }
-    if (!duckTimer) duckTimer = window.setInterval(() => { if (bus) bus.gain.setTargetAtTime(isSpeaking() ? 0.5 : 1, ctx.currentTime, 0.15) }, 120)
+    if (!duckTimer) duckTimer = window.setInterval(() => { if (bus) bus.gain.setTargetAtTime(barge ? 0.12 : isSpeaking() ? 0.5 : 1, ctx.currentTime, 0.12) }, 120)
   },
   stop() { current?.stop(); current = null },
   get muted() { return sfx.muted },

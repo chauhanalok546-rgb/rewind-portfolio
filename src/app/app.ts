@@ -3,6 +3,8 @@ import { fx, loadStage, stage, type Theme } from '../stage'
 import { film } from '../film/film'
 import { $, decay, hide, log, reduced, setStatus, shockwave, show, wait, whiteFlash } from './hud'
 import { tunnel } from '../film/tunnel'
+import { startBargeIn } from '../voice/bargein'
+import { music } from '../audio/music'
 import gsap from 'gsap'
 import { sfx } from '../audio/sfx'
 import { mountStickers, toast } from '../ui/stickers'
@@ -184,6 +186,14 @@ function handsFreeQuestion(text: string) {
   heard(text); log(`Voice question: ${text.slice(0, 50)}`)
   void askApi.ask(text.trim())
 }
+/** a small live read-out of what the microphone is hearing, so the visitor can see he is listening and whether the words are coming through */
+let hearTimer: ReturnType<typeof setTimeout> | undefined
+function showHearing(text: string) {
+  let el = document.getElementById('heardlive')
+  if (!el) { el = document.createElement('div'); el.id = 'heardlive'; el.className = 'heardlive mono'; document.getElementById('app')!.appendChild(el) }
+  el.textContent = '🎧 ' + text.trim().slice(-70); el.classList.add('on')
+  clearTimeout(hearTimer); hearTimer = setTimeout(() => el!.classList.remove('on'), 2200)
+}
 let voiceStarted = false
 function startVoice() {
   if (voiceStarted) return
@@ -192,12 +202,15 @@ function startVoice() {
   const mic = $('c-mic') as HTMLButtonElement
   mic.disabled = false; mic.title = 'Say “Hey Alok, listen” and ask him anything. Also: pause, skip, back, replay, contact or a year (M)'
   recognizer.onFinal = handleSpeech
-  recognizer.onInterim = (t) => { if (!askCapture) onWake(t, true) }
+  recognizer.onInterim = (t) => { showHearing(t); if (!askCapture) onWake(t, true) }
   recognizer.onState = (st) => {
     const on = st === 'listening'
     mic.classList.toggle('listening', on); mic.setAttribute('aria-pressed', String(on))
     document.documentElement.dataset.voice = on ? 'on' : 'off'
-    if (on && !mic.dataset.logged) { mic.dataset.logged = '1'; log('Microphone listening ✓'); toast('Say “Hey Alok, listen” to ask me anything') }
+    if (on && !mic.dataset.logged) {
+      mic.dataset.logged = '1'; log('Microphone listening ✓'); toast('Say “Hey Alok, listen” to ask me anything, even while I am talking')
+      startBargeIn((talking) => { avatar.setDuck(talking ? 0.1 : 1); music.setBarge(talking) })       // his voice drops the moment you speak over him
+    }
     if (st === 'blocked') { mic.disabled = true; mic.title = 'Microphone blocked: buttons do everything'; log('Microphone declined'); toast('Microphone is blocked here. Open the site in Chrome and allow the mic to talk to Alok.') }
   }
   recognizer.start()

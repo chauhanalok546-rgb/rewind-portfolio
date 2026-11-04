@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { mergeStatic } from './mergeStatic'
 
 /** The Chrono Engine: a big machine at the back of the lab. Two interlocking cog wheels turn against each other around glowing hubs,
  *  with pulses of light running round the rims, sweeping beams and a pulsing core. It sits deep behind the avatar, softly fogged. */
@@ -30,6 +31,7 @@ function cog(radius: number, teeth: number, thick: number) {
 export function createEngine() {
   const root = new THREE.Group()
   const A = cog(1.15, 22, 0.22), B = cog(0.75, 14, 0.22), C = cog(0.5, 10, 0.22)
+  for (const g of [A, B, C]) mergeStatic(g, [g.userData.pulse as THREE.Object3D])        // 100+ tiny meshes (teeth, spokes, rings) become a few
   A.position.set(-0.55, 1.95, 0); B.position.set(1.1, 1.45, 0); C.position.set(0.2, 3.25, 0)
   root.add(A, B, C)
   // interlock: A and B turn against each other with a ratio of their teeth; C meshes with A

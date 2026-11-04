@@ -8,7 +8,7 @@ const steel = new THREE.MeshStandardMaterial({ color: '#aab6c8', metalness: 0.9,
 const amber = new THREE.MeshStandardMaterial({ color: '#ffb020', metalness: 0.5, roughness: 0.35 })
 const led = new THREE.MeshBasicMaterial({ color: new THREE.Color('#00b4ff').multiplyScalar(2.8), toneMapped: false })
 const coreMat = new THREE.MeshStandardMaterial({ color: '#ffb020', emissive: '#ff9a00', emissiveIntensity: 2.2, roughness: 0.3 })
-const mesh = (g: THREE.BufferGeometry, m: THREE.Material, p: THREE.Object3D) => { const o = new THREE.Mesh(g, m); o.castShadow = true; p.add(o); return o }
+const mesh = (g: THREE.BufferGeometry, m: THREE.Material, p: THREE.Object3D) => { const o = new THREE.Mesh(g, m); o.castShadow = false; p.add(o); return o }
 
 export function createMachine() {
   const root = new THREE.Group(); root.visible = false

@@ -270,6 +270,9 @@ export class Avatar {
   isSpeaking() { return this.flapping || !!(this.audio && !this.audio.paused && !this.audio.ended && (this.analyserMode || this.cues.length)) }
 
   setMuted(m: boolean) { this.muted = m; if (this.audio) this.audio.muted = m }
+  /** the visitor is talking over him: his voice drops to a whisper so the microphone can hear them (1 = normal) */
+  private duckLevel = 1
+  setDuck(v: number) { this.duckLevel = v; if (this.audio) this.audio.volume = v }
 
   private epoch = 0                  // bumped by every new utterance and by stop(): a clip still fetching its cues when this changes never starts
   stop() { this.epoch++; this.audio?.pause(); this.cues = []; this.analyserMode = false }
@@ -289,7 +292,7 @@ export class Avatar {
       this.cues = cues; this.cueIdx = 0
       const el = new Audio(audioUrl)
       el.crossOrigin = 'anonymous'
-      el.muted = this.muted
+      el.muted = this.muted; el.volume = this.duckLevel
       this.audio = el
       this.analyserMode = true
       this.ensureAudioGraph(el)

@@ -17,7 +17,7 @@ const canvas = document.getElementById('stage') as HTMLCanvasElement
 const lowEnd = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 560 || (navigator.hardwareConcurrency ?? 8) <= 4
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowEnd, alpha: true, powerPreference: 'high-performance' })
-let dprCap = lowEnd ? 1.25 : 1.5                       // lowered automatically when the frame rate dips
+let dprCap = lowEnd ? 1.25 : Math.min(1.5, Math.max(1, Math.sqrt(2.3e6 / (innerWidth * innerHeight))))      // about 2.3 megapixels at most                       // lowered automatically when the frame rate dips
 renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap))
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1.1
@@ -265,7 +265,7 @@ let warped = false
 let prevT = performance.now()
 let elapsed = 0
 let frames = 0, fpsT = 0
-export const perf = { fps: 60, dpr: 1 }
+export const perf = { fps: 60, dpr: 1, calls: 0, tris: 0, shadows: 0 }
 let running = true
 function tick() {
   const now = performance.now(); const dt = Math.min((now - prevT) / 1000, 0.05); prevT = now; elapsed += dt
@@ -294,6 +294,7 @@ function tick() {
   } else if (warped) { camera.fov = baseFov; camera.updateProjectionMatrix(); warped = false }
   camera.lookAt(lookNow)
   renderer.render(scene, camera)
+  perf.calls = renderer.info.render.calls; perf.tris = renderer.info.render.triangles
   frames++; fpsT += dt
   if (fpsT >= 1) {
     perf.fps = frames / fpsT; frames = 0; fpsT = 0; perf.dpr = Math.min(devicePixelRatio, dprCap)

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { mergeStatic } from './mergeStatic'
 
 /** RINGO: a robot dog and Alok's partner in time travel. A capsule body with LED eyes, antenna ears, a wagging tail, a name tag, and four
  *  two-segment legs on a trot cycle. He follows the avatar around, trots when he has to catch up, tilts his head when Alok talks and barks on cue. */
@@ -7,7 +8,7 @@ const white = new THREE.MeshStandardMaterial({ color: '#e6edf8', metalness: 0.6,
 const amber = new THREE.MeshStandardMaterial({ color: '#ffb020', emissive: '#ff9a00', emissiveIntensity: 0.5, metalness: 0.5, roughness: 0.35 })
 const cyan = new THREE.MeshBasicMaterial({ color: new THREE.Color('#00b4ff').multiplyScalar(3), toneMapped: false })
 const eyeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#7fe0ff').multiplyScalar(3), toneMapped: false })
-const mesh = (g: THREE.BufferGeometry, m: THREE.Material, p: THREE.Object3D) => { const o = new THREE.Mesh(g, m); o.castShadow = true; p.add(o); return o }
+const mesh = (g: THREE.BufferGeometry, m: THREE.Material, p: THREE.Object3D) => { const o = new THREE.Mesh(g, m); o.castShadow = false; p.add(o); return o }
 
 function tagTexture() {
   const c = document.createElement('canvas'); c.width = 256; c.height = 128
@@ -66,6 +67,9 @@ export function createDog() {
     mesh(new THREE.SphereGeometry(0.034, 12, 10), graphite, knee).position.y = -L2
     return { hip, knee, front: z > 0, phase: (i === 0 || i === 3) ? 0 : Math.PI }
   })
+  // fewer draw calls: the rigid pieces of each part are baked together (legs, tail, head and body keep moving as wholes)
+  for (const l of legs) { mergeStatic(l.knee); mergeStatic(l.hip, [l.knee]) }
+  mergeStatic(tail); mergeStatic(head, [...eyes, ...ears]); mergeStatic(body, [head, tail, ...legs.map((l) => l.hip)])
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false })); blob.rotation.x = -Math.PI / 2; blob.position.y = 0.004; root.add(blob)
 
   // state
