@@ -184,8 +184,11 @@ function handsFreeQuestion(text: string) {
   heard(text); log(`Voice question: ${text.slice(0, 50)}`)
   void askApi.ask(text.trim())
 }
+let voiceStarted = false
 function startVoice() {
-  if (!voiceSupported) return
+  if (voiceStarted) return
+  if (!voiceSupported) { toast('Voice talk needs Chrome, Edge or Safari. The buttons do everything.'); return }
+  voiceStarted = true
   const mic = $('c-mic') as HTMLButtonElement
   mic.disabled = false; mic.title = 'Say “Hey Alok, listen” and ask him anything. Also: pause, skip, back, replay, contact or a year (M)'
   recognizer.onFinal = handleSpeech
@@ -195,7 +198,7 @@ function startVoice() {
     mic.classList.toggle('listening', on); mic.setAttribute('aria-pressed', String(on))
     document.documentElement.dataset.voice = on ? 'on' : 'off'
     if (on && !mic.dataset.logged) { mic.dataset.logged = '1'; log('Microphone listening ✓'); toast('Say “Hey Alok, listen” to ask me anything') }
-    if (st === 'blocked') { mic.disabled = true; mic.title = 'Microphone blocked: buttons do everything'; log('Microphone declined') }
+    if (st === 'blocked') { mic.disabled = true; mic.title = 'Microphone blocked: buttons do everything'; log('Microphone declined'); toast('Microphone is blocked here. Open the site in Chrome and allow the mic to talk to Alok.') }
   }
   recognizer.start()
   mic.addEventListener('click', () => recognizer.toggle())
@@ -318,6 +321,7 @@ export async function startApp() {
   askApi = initAsk({ getState, caption, startListening })
   const hash = location.hash.replace('#', '')
   skipEnter = /^(lobby|ask|transition|film-scene\d)$/.test(hash)
+  if (skipEnter) addEventListener('pointerdown', () => { sfx.unlock(); startVoice() }, { once: true })     // shortcut links skip Enter, so the first click (a user gesture) switches the microphone on instead
   if (hash === 'dev') { (await import('../dev')).mountDev() }
   await boot()
   // development jumps: #lobby, #ask, #transition skip the Enter click (sound stays locked until a click)
