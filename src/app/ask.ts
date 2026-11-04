@@ -14,7 +14,7 @@ let held = false, wasPlaying = false, wasAuto = false
 let snap: ReturnType<typeof avatar.holdSpeech> = null
 let prevCaption = { text: '', on: false }
 
-export function initAsk(d: Deps) {
+export function initAsk(d: Deps): { ask: (q: string) => Promise<void> } {
   const box = $('askbox'), input = $('askbox-input') as HTMLInputElement, mic = $('askbox-mic'), form = $('askbox-form')
   const chips = $('askbox-chips')
   for (const s of SUGGESTIONS) { const c = document.createElement('button'); c.type = 'button'; c.className = 'chip'; c.textContent = s; c.addEventListener('click', () => void submit(s)); chips.appendChild(c) }
@@ -76,4 +76,5 @@ export function initAsk(d: Deps) {
     else { avatar.flapping = true; await speakBrowser(a.say); if (my === askToken) avatar.flapping = false }
     if (a.audio?.startsWith('blob:')) URL.revokeObjectURL(a.audio)
   }
+  return { ask: submit }
 }

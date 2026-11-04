@@ -10,6 +10,7 @@ import { startPresence, type Presence } from '../sense/presence'
 import { Recognizer, voiceSupported } from '../voice/recognizer'
 import { parseCommand } from '../voice/parse'
 import { initAsk } from './ask'
+import { isEcho, looksLikeQuestion } from '../voice/question'
 
 /** The experience as an explicit state machine:  BOOT → ENTER → LOBBY → PRESENCE → GREETING → ASK → TRANSITION → ARRIVED
  *  (the film itself arrives in the next phase).  Any state can be jumped to with a URL hash, e.g. #ask or #lobby. */
@@ -34,8 +35,12 @@ function typeInto(el: HTMLElement, text: string, speed = 24): Promise<void> {
     step()
   })
 }
+const spoken: { t: number; text: string }[] = []     // what he said out loud lately: anything the mic hears that matches it is his own voice coming back in
+let lastSpoke = 0
+setInterval(() => { if (avatar.isSpeaking()) lastSpoke = performance.now() }, 150)
 function caption(text: string | null, speaker?: string) {
   const el = $('sub')
+  if (text && !text.startsWith('You: ')) { spoken.push({ t: performance.now(), text }); while (spoken.length > 6) spoken.shift() }
   if (!text) { el.classList.remove('on'); return }
   el.textContent = speaker === 'ARM-01' ? `ARM-01: ${text}` : text
   el.classList.add('on')
@@ -130,7 +135,7 @@ let askCapture: ((t: string) => void) | null = null   // set while the Ask Alok 
 function handleSpeech(text: string) {
   if (askCapture) { const f = askCapture; askCapture = null; f(text); return }
   const cmd = parseCommand(text, { asking: state === 'ASK', inFilm: state === 'FILM' || state === 'END' })
-  if (!cmd) return
+  if (!cmd) { handsFreeQuestion(text); return }
   heard(text); log(`Voice: ${cmd.type}${cmd.type === 'year' ? ' ' + cmd.year : ''}`)
   switch (cmd.type) {
     case 'yes': void sayYes(); break
@@ -145,10 +150,22 @@ function handleSpeech(text: string) {
     case 'year': film.jump(cmd.scene); break
   }
 }
+/** Hands-free: a question spoken to him is answered on his own (the world pauses, he answers, the world carries on). Ignored while he is
+ *  talking, for a moment after, and whenever the words are just his own voice coming back through the speakers. */
+let askApi: { ask: (q: string) => Promise<void> } | null = null
+function handsFreeQuestion(text: string) {
+  if (!askApi || ['BOOT', 'ENTER', 'TRANSITION'].includes(state)) return
+  if (!looksLikeQuestion(text)) return
+  const now = performance.now()
+  if (avatar.isSpeaking() || now - lastSpoke < 1600) return
+  if (isEcho(text, spoken.filter((s) => now - s.t < 25000).map((s) => s.text))) return
+  heard(text); log(`Voice question: ${text.slice(0, 50)}`)
+  void askApi.ask(text.trim())
+}
 function startVoice() {
   if (!voiceSupported) return
   const mic = $('c-mic') as HTMLButtonElement
-  mic.disabled = false; mic.title = 'Voice commands: say pause, skip, back, replay, contact or a year (M)'
+  mic.disabled = false; mic.title = 'Talk to Alok: ask him a question out loud, or say pause, skip, back, replay, contact or a year (M)'
   recognizer.onFinal = handleSpeech
   recognizer.onState = (st) => {
     const on = st === 'listening'
@@ -275,7 +292,7 @@ function wireControls() {
 
 export async function startApp() {
   mountStickers(); wireControls()
-  initAsk({ getState, caption, startListening })
+  askApi = initAsk({ getState, caption, startListening })
   const hash = location.hash.replace('#', '')
   skipEnter = /^(lobby|ask|transition|film-scene\d)$/.test(hash)
   if (hash === 'dev') { (await import('../dev')).mountDev() }
@@ -293,3 +310,4 @@ export async function startApp() {
   }
 }
 export { toast }
+;(window as unknown as Record<string, unknown>).__heard = handleSpeech     // dev hook: pretend the microphone heard this sentence
