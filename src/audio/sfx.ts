@@ -47,6 +47,17 @@ export const sfx = {
     const bg = c.createGain(); bg.gain.setValueAtTime(0.35, t0 + 0.004); bg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2)
     body.connect(bp); bp.connect(bg); bg.connect(master); body.start(t0)
   },
+  /** a vehicle passing: a pitch-dropping whoosh that pans from one side to the other (dir 1 = left to right) */
+  flyby(dir = 1) {
+    const c = ensure(); if (!master) return
+    const t0 = c.currentTime, d = 2.4
+    const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(230, t0); o.frequency.exponentialRampToValueAtTime(120, t0 + d)
+    const n = noise(c, d), bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.8; bp.frequency.setValueAtTime(900, t0); bp.frequency.exponentialRampToValueAtTime(260, t0 + d)
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.16, t0 + d * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d)
+    const pan = c.createStereoPanner(); pan.pan.setValueAtTime(-0.8 * dir, t0); pan.pan.linearRampToValueAtTime(0.8 * dir, t0 + d)
+    o.connect(lp); lp.connect(g); n.connect(bp); bp.connect(g); g.connect(pan); pan.connect(master); o.start(t0); o.stop(t0 + d); n.start(t0)
+  },
   /** the time-warp: a rising riser into a deep impact; `lead` seconds of build-up, then the boom */
   warp(lead = 1.2) {
     const c = ensure(); if (!master) return

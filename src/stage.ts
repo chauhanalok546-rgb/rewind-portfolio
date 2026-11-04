@@ -5,6 +5,8 @@ import { Avatar } from './avatar/Avatar'
 import { Narrator } from './voice/Narrator'
 import { createRobot } from './robot'
 import { createMachine } from './machine'
+import { createHovercar } from './hovercar'
+import { sfx } from './audio/sfx'
 
 export type Theme = 'cinematic' | 'lab'
 
@@ -98,6 +100,10 @@ scene.add(robot.root)
 const machine = createMachine()
 machine.root.position.set(-1.2, 0.42, 0.1); machine.root.rotation.y = 0.5
 scene.add(machine.root)
+// hover-cars cruising through the background, with a passing whoosh
+const hovercar = createHovercar((dir) => sfx.flyby(dir))
+hovercar.setEnabled(!reducedMotion)
+scene.add(hovercar.root)
 
 /** Knobs the app turns: ring speed, glow flare (snap), chronometer glow, mote speed. */
 export const fx = { ringSpeed: 1, flare: 0, chrono: 0, motes: 1, warp: 0 }
@@ -243,6 +249,7 @@ function tick() {
   avatar.update(dt)
   robot.update(dt)
   machine.update(dt, t)
+  hovercar.update(dt)
   stepParticles(dt)
   for (const r of rings) { r.rotation.z += dt * r.userData.speed * fx.ringSpeed * (reducedMotion ? 0.35 : 1) * (r.userData.axis % 2 ? -1 : 1); r.position.y = r.userData.baseY + Math.sin(t * 0.5 + r.userData.axis) * 0.03 }
   moteMat.uniforms.uTime.value = t; moteMat.uniforms.uSpeed.value = fx.motes
@@ -279,7 +286,7 @@ export async function loadStage(onProgress: (f: number) => void) {
 }
 tick()
 
-export const stage = { avatar, narrator, robot, machine, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
+export const stage = { avatar, narrator, robot, machine, hovercar, fx, setTheme, getTheme, setCloseUp, isCloseUp, perf, setLobbyVisible, setAmbience, setAvatarPose, teleport, setAvatarVisible }
 ;(window as unknown as Record<string, unknown>).__stage = stage
 ;(window as unknown as Record<string, unknown>).__avatar = avatar
 ;(window as unknown as Record<string, unknown>).__narrator = narrator
