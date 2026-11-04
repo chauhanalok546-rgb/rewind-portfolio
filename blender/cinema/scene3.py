@@ -39,13 +39,41 @@ for i in range(14):
         if i < 7: point("lamp%d" % i, (side * 8.2, y, 6.9), 2600, (1.0, 0.68, 0.35), 0.4)
 # a bus and cars on the road
 busgrp = bpy.data.objects.new("busgrp", None); link(busgrp)
-parts = [box("busbody", (3.1, 9.5, 3.3), (-3.6, 18, 1.95), mat("bus", (0.95, 0.65, 0.12), rough=0.4, spec=0.7)), box("busglass", (3.12, 8, 1.1), (-3.6, 18, 2.4), emission("busglass", (1.0, 0.9, 0.6), 4)),
-         box("lampL", (0.5, 0.1, 0.4), (-4.6, 22.9, 1.0), emission("hl", (1, 0.95, 0.8), 80)), box("lampR", (0.5, 0.1, 0.4), (-2.6, 22.9, 1.0), emission("hl2", (1, 0.95, 0.8), 80))]
+busp = mat("bus", (0.4, 0.015, 0.01), rough=0.5, spec=0.3); busdark = mat("busdark", (0.03, 0.05, 0.08), rough=0.05, spec=1.0)
+parts = [box("busbody", (3.1, 9.5, 2.2), (-3.6, 18, 1.55), busp), box("busroof", (3.0, 9.3, 0.9), (-3.6, 18, 3.1), busp),
+         box("busglass1", (3.14, 8.6, 0.85), (-3.6, 18, 2.15), busdark), box("busglass2", (3.14, 0.1, 1.5), (-3.6, 22.8, 2.4), busdark), box("busband", (3.14, 9.4, 0.18), (-3.6, 18, 1.1), mat("busband", (0.95, 0.9, 0.85), rough=0.4)),
+         box("lampL", (0.5, 0.1, 0.3), (-4.4, 22.78, 0.9), emission("hl", (1, 0.95, 0.8), 30)), box("lampR", (0.5, 0.1, 0.3), (-2.8, 22.78, 0.9), emission("hl2", (1, 0.95, 0.8), 30)),
+         box("btl1", (0.4, 0.1, 0.2), (-4.4, 13.25, 0.9), emission("btl", (1, 0.1, 0.05), 10)), box("btl2", (0.4, 0.1, 0.2), (-2.8, 13.25, 0.9), emission("btl", (1, 0.1, 0.05), 10))]
+tyre0 = mat("tyre0", (0.02, 0.02, 0.025), rough=0.8)
+for sx in (-1, 1):
+    for fy in (-3.0, 3.2): parts.append(cyl("bw", 0.55, 0.35, (-3.6 + sx * 1.55, 18 + fy, 0.55), tyre0, 20, (0, 1.5708, 0)))
 for o in parts: o.parent = busgrp
 busgrp.location = (0, 0, 0); busgrp.keyframe_insert('location', frame=1); busgrp.location = (0, 26, 0); busgrp.keyframe_insert('location', frame=A['frames'])
-tail = emission("tail", (1.0, 0.1, 0.05), 40)
-for i, (x, y) in enumerate(((4.0, 40), (3.4, 70), (-4.5, 95), (4.2, 120), (-3.8, 150))):
-    box("car", (1.8, 4.3, 1.4), (x, y, 0.8), mat("car%d" % i, [(0.7, 0.1, 0.1), (0.1, 0.2, 0.5), (0.8, 0.8, 0.8)][i % 3], rough=0.35, spec=0.8)); box("tail", (1.4, 0.08, 0.25), (x, y - 2.17, 0.9), tail)
+tail = emission("tail", (1.0, 0.08, 0.04), 9)
+tyre = mat("tyre", (0.02, 0.02, 0.025), rough=0.8); glassm = mat("cglass", (0.05, 0.08, 0.12), rough=0.05, spec=1.0, metal=0.2)
+def car(x, y, col, i, scale=1.0, kind=0):
+    g = bpy.data.objects.new("carg%d" % i, None); link(g)
+    paint = mat("car%d" % i, tuple(c * 0.45 for c in col), rough=0.5, spec=0.3)
+    L, W = (4.4, 1.85) if kind == 0 else (4.9, 2.0)
+    P = [box("lower", (W, L, 0.75), (0, 0, 0.72), paint),
+         box("hood", (W - 0.1, L * 0.3, 0.12), (0, L * 0.34, 1.12), paint),
+         box("trunk", (W - 0.1, L * 0.22, 0.12), (0, -L * 0.38, 1.12), paint),
+         box("cabin", (W - 0.25, L * 0.42, 0.62), (0, -L * 0.04, 1.35), glassm),
+         box("roof", (W - 0.3, L * 0.34, 0.07), (0, -L * 0.04, 1.69), paint),
+         box("hl1", (0.42, 0.08, 0.2), (-W * 0.34, L / 2, 0.85), emission("chl", (1, 0.95, 0.8), 25)), box("hl2", (0.42, 0.08, 0.2), (W * 0.34, L / 2, 0.85), emission("chl2", (1, 0.95, 0.8), 25)),
+         box("tl1", (0.5, 0.08, 0.16), (-W * 0.34, -L / 2, 0.9), tail), box("tl2", (0.5, 0.08, 0.16), (W * 0.34, -L / 2, 0.9), tail),
+         box("bump", (W + 0.02, 0.1, 0.18), (0, L / 2, 0.45), tyre), box("bump2", (W + 0.02, 0.1, 0.18), (0, -L / 2, 0.45), tyre)]
+    for sx in (-1, 1):
+        for fy in (-0.32, 0.32): P.append(cyl("wheel", 0.36, 0.24, (sx * (W / 2 - 0.05), fy * L, 0.36), tyre, 20, (0, 1.5708, 0)))
+    for o in P: o.parent = g
+    g.location = (x, y, 0); g.scale = (scale, scale, scale)
+    return g
+cols = [(0.8, 0.02, 0.02), (0.02, 0.1, 0.6), (0.9, 0.9, 0.92), (0.95, 0.65, 0.0), (0.03, 0.03, 0.04), (0.0, 0.45, 0.12)]
+for i, (x, y) in enumerate(((4.0, 40), (3.4, 70), (-4.5, 95), (4.2, 120), (-3.8, 150), (-4.2, 55), (4.3, 20), (-4.0, 135), (3.6, 100), (4.0, 170))):
+    car(x, y, cols[i % len(cols)], i, 1.0, i % 2)
+# parked cars along the kerbs
+for i, (x, y) in enumerate(((-7.2, 8), (-7.2, 30), (7.4, 14), (7.4, 48), (-7.2, 66), (7.4, 84))):
+    car(x, y, cols[(i + 2) % len(cols)], 20 + i, 1.0, (i + 1) % 2)
 dust(160, ((-12, 12), (0, 120), (0.5, 12)), (1.0, 0.75, 0.5), 6, 0.04)
 camera(sc, (1.2, -22, 2.3), (1.0, -13, 2.4), (0.4, 60, 4.2), (0.2, 60, 4.5), lens=30, fstop=2.0, focus=45, frames=A['frames'])
 render(sc, A['out'], A['only_frame'])
