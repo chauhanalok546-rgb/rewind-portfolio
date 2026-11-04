@@ -1,7 +1,7 @@
 import type { Gesture } from '../avatar/Avatar'
 
 export interface Answer { say: string; gesture: Gesture; mood: 'neutral' | 'happy' | 'serious' | 'proud'; jumpTo: string | null; audio?: string; source: 'live' | 'canned' | 'unknown' }
-interface Canned { id: string; q: string; keys: string[]; say: string; gesture: Gesture; mood: Answer['mood']; jumpTo: string | null }
+interface Canned { id: string; duration?: number; q: string; keys: string[]; say: string; gesture: Gesture; mood: Answer['mood']; jumpTo: string | null }
 
 const TIMEOUT = 26000                 // a real answer is worth waiting for (the caption says "one moment" after 2.5 s); the server gives up on its own at ~24 s
 const history: { q: string; a: string }[] = []        // the last few turns, sent along so follow-ups ("why?", "give an example") make sense
@@ -38,7 +38,7 @@ export async function askBrain(q: string): Promise<Answer> {
     }
   } catch { /* offline, no key, rate-limited or slow: fall through */ }
   const c = await closestCanned(q)
-  if (c) return { say: c.say, gesture: c.gesture, mood: c.mood, jumpTo: c.jumpTo, audio: `/audio/answers/${c.id}.mp3`, source: 'canned' }
+  if (c) return { say: c.say, gesture: c.gesture, mood: c.mood, jumpTo: c.jumpTo, audio: c.duration ? `/audio/answers/${c.id}.mp3` : undefined, source: 'canned' }
   return { say: "Hmm, my thinking cap isn't working properly right now, so I can't answer that one well. Ask me again in a moment, or find the real Alok on LinkedIn as alok-chauhan-72a9603a1.", gesture: 'present', mood: 'neutral', jumpTo: null, source: 'unknown' }
 }
 
