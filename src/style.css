@@ -303,3 +303,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page);
 /* what the microphone hears, live */
 .heardlive { position: absolute; left: 50%; top: 132px; transform: translateX(-50%); z-index: 31; pointer-events: none; max-width: min(560px, 90vw); padding: 5px 12px; border-radius: 999px; font-size: 12px; opacity: 0; transition: opacity 0.25s; background: var(--glass-bg); border: 1px solid var(--glass-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .heardlive.on { opacity: 0.9; }
+
+/* smoothness: while the film plays, nothing is blurred behind the glass (a blur over a moving video and a moving 3D canvas is recomputed every frame) */
+.film .glass, .film .card2, .film .sub, .film .toast, .film .heard, .film .banner2 { backdrop-filter: none; -webkit-backdrop-filter: none; }
+[data-theme='cinematic'] .film .card2, [data-theme='cinematic'] .film .glass { background: rgba(9, 15, 28, 0.80); }
+[data-theme='cinematic'] .film .sub { background: rgba(9, 15, 28, 0.86); }

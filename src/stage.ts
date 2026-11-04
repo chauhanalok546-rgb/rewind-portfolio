@@ -22,7 +22,7 @@ const canvas = document.getElementById('stage') as HTMLCanvasElement
 const lowEnd = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 560 || (navigator.hardwareConcurrency ?? 8) <= 4
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowEnd, alpha: true, powerPreference: 'high-performance' })
-let dprCap = lowEnd ? 1.25 : Math.min(1.5, Math.max(1, Math.sqrt(2.3e6 / (innerWidth * innerHeight))))      // about 2.3 megapixels at most                       // lowered automatically when the frame rate dips
+let dprCap = lowEnd ? 1.25 : Math.min(1.5, Math.max(1, Math.sqrt(1.9e6 / (innerWidth * innerHeight))))      // about 1.9 megapixels at most                       // lowered automatically when the frame rate dips
 renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap))
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1.1
@@ -252,7 +252,7 @@ const gradeShader = {
       gl_FragColor = vec4(c, min(a, 1.0)); }`,
 }
 let composer: EffectComposer | null = null, bloom: UnrealBloomPass | null = null
-let cinematic = !lowEnd && !reducedMotion && !/[?&]fx=off/.test(location.search), lowFpsSeconds = 0
+let cinematic = !lowEnd && !reducedMotion && /[?&]fx=on/.test(location.search), lowFpsSeconds = 0       // the glow is opt-in (press G, or add ?fx=on): smooth first
 function initComposer() {
   if (composer || !cinematic) return
   composer = new EffectComposer(renderer)
